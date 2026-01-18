@@ -18,12 +18,12 @@
           <label>物品数量</label>
           <div class="button-group">
             <button
-              v-for="count in [6, 9, 12, 15]"
-              :key="count"
-              :class="['count-button', { active: itemCount === count }]"
-              @click="itemCount = count"
+              v-for="opt in itemCountOptions"
+              :key="opt.value"
+              :class="['count-button', { active: itemCount === parseInt(opt.value) }]"
+              @click="itemCount = parseInt(opt.value)"
             >
-              {{ count }}个
+              {{ opt.label }}
             </button>
           </div>
         </div>
@@ -193,46 +193,15 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import { itemPool, itemCountOptions, speedOptions } from '@/config/sequence.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-const itemPool = [
-  { name: '轿车', category: '交通工具', icon: '🚗' },
-  { name: '自行车', category: '交通工具', icon: '🚲' },
-  { name: '飞机', category: '交通工具', icon: '✈️' },
-  { name: '火车', category: '交通工具', icon: '🚂' },
-  { name: '面包', category: '食品', icon: '🍞' },
-  { name: '苹果', category: '食品', icon: '🍎' },
-  { name: '香蕉', category: '食品', icon: '🍌' },
-  { name: '蛋糕', category: '食品', icon: '🍰' },
-  { name: '雨伞', category: '日用品', icon: '☂️' },
-  { name: '钥匙', category: '日用品', icon: '🔑' },
-  { name: '手表', category: '日用品', icon: '⌚' },
-  { name: '眼镜', category: '日用品', icon: '👓' },
-  { name: '铅笔', category: '文具', icon: '✏️' },
-  { name: '笔记本', category: '文具', icon: '📓' },
-  { name: '橡皮', category: '文具', icon: '🧹' },
-  { name: '尺子', category: '文具', icon: '📏' },
-  { name: '手机', category: '电子产品', icon: '📱' },
-  { name: '电脑', category: '电子产品', icon: '💻' },
-  { name: '相机', category: '电子产品', icon: '📷' },
-  { name: '耳机', category: '电子产品', icon: '🎧' },
-  { name: 'T恤', category: '服装', icon: '👕' },
-  { name: '帽子', category: '服装', icon: '🎩' },
-  { name: '鞋子', category: '服装', icon: '👟' },
-  { name: '手套', category: '服装', icon: '🧤' }
-]
-
-const itemCount = ref(9)
+const itemCount = ref(parseInt(itemCountOptions[1].value)) // 默认9个
 const displaySpeed = ref('normal')
 
-const speedOptions = [
-  { label: '慢速', value: 'slow' },
-  { label: '正常', value: 'normal' },
-  { label: '快速', value: 'fast' }
-]
 const isTraining = ref(false)
 const showResult = ref(false)
 const phase = ref('display')
@@ -432,9 +401,7 @@ function goBack() {
 }
 
 .button-group {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $spacing-sm;
+  @include button-grid;
 
   .count-button {
     @include button-reset;

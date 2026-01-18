@@ -19,7 +19,7 @@
           <label>方格尺寸</label>
           <div class="button-group">
             <button
-              v-for="size in [3, 5, 7, 9]"
+              v-for="size in gridSizes"
               :key="size"
               :class="['size-button', { active: gridSize === size }]"
               @click="gridSize = size"
@@ -119,6 +119,10 @@
             <span class="stat-label">平均反应</span>
             <span class="stat-value">{{ averageReactionTime }}ms</span>
           </div>
+          <div class="stat">
+            <span class="stat-label">错误次数</span>
+            <span class="stat-value">{{ wrongCount }}</span>
+          </div>
         </div>
 
         <div class="result-actions">
@@ -135,7 +139,8 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
-import { correctFeedback, errorFeedback } from '@/utils/animations'
+import { gridSizes, modeOptions, timeLimitMap } from '@/config/schulte.js'
+// 动画已移除
 import { Switch as VanSwitch } from 'vant'
 import 'vant/lib/switch/style'
 
@@ -144,15 +149,9 @@ const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
 // 配置
-const gridSize = ref(5)
+const gridSize = ref(gridSizes[1])
 const mode = ref('number')
 const showFeedback = ref(false) // 是否显示正确点击的视觉反馈
-
-const modeOptions = [
-  { value: 'number', label: '数字模式' },
-  { value: 'color', label: '多色数字' },
-  { value: 'reverse', label: '降序模式' }
-]
 
 // 训练状态
 const isTraining = ref(false)
@@ -166,6 +165,7 @@ const finalTime = ref(0)
 const lastClickWrong = ref(false)
 const lastClickIndex = ref(-1)
 const reactionTimes = ref([])
+const wrongCount = ref(0)
 const isSuccess = ref(false)
 
 let timer = null
@@ -179,8 +179,7 @@ const averageReactionTime = computed(() => {
 })
 
 function getTimeLimit(size) {
-  const limits = { 3: 15, 5: 30, 7: 60, 9: 90 }
-  return limits[size] || 30
+  return timeLimitMap[size] || 30
 }
 
 function generateGrid() {
@@ -220,6 +219,7 @@ function startTraining() {
   isTraining.value = true
   showResult.value = false
   grid.value = generateGrid()
+  wrongCount.value = 0
   clickedNumbers.value = []
   currentTarget.value = 1
   startTime.value = Date.now()
@@ -257,7 +257,6 @@ function handleClick(num, index) {
     // 根据设置决定是否显示动画反馈
     if (showFeedback.value) {
       const cell = document.querySelectorAll('.grid-cell')[index]
-      if (cell) correctFeedback(cell)
     }
 
     // 检查是否完成
@@ -266,13 +265,13 @@ function handleClick(num, index) {
     }
   } else {
     // 错误点击 - 始终显示错误反馈
+    wrongCount.value++
     lastClickWrong.value = true
     lastClickIndex.value = index
 
     // 错误反馈动画
     const cell = document.querySelectorAll('.grid-cell')[index]
-    if (cell) errorFeedback(cell)
-
+    
     setTimeout(() => {
       lastClickWrong.value = false
     }, 400)
@@ -304,7 +303,8 @@ function endTraining(success) {
       gridSize: gridSize.value,
       mode: mode.value,
       reactionTimes: reactionTimes.value,
-      averageReactionTime: averageReactionTime.value
+      averageReactionTime: averageReactionTime.value,
+      wrongCount: wrongCount.value
     }
   })
 }
@@ -343,7 +343,7 @@ onUnmounted(() => {
 .page-header {
   @include safe-area-padding(top);
   display: flex;
-  align-items: center;
+    align-items: center;
   justify-content: center;
   padding: $spacing-md $spacing-lg;
   background: rgba(255, 255, 255, 0.02);
@@ -445,6 +445,7 @@ onUnmounted(() => {
 }
 
 .button-group {
+  @include button-grid;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: $spacing-md;
@@ -467,7 +468,7 @@ onUnmounted(() => {
     position: relative;
 
     @media (max-width: $breakpoint-sm) {
-      padding: 12px 8px;
+      padding: 12px;
       font-size: 14px;
     }
 
@@ -483,7 +484,6 @@ onUnmounted(() => {
     &:hover:not(.active) {
       background: rgba(255, 255, 255, 0.12);
       border-color: rgba(0, 212, 255, 0.3);
-      transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
   }
@@ -558,7 +558,6 @@ onUnmounted(() => {
   }
 
   &:hover {
-    transform: translateY(-2px) scale(1.02);
     box-shadow:
       0 12px 32px rgba(0, 212, 255, 0.5),
       0 0 60px rgba(0, 212, 255, 0.3);
@@ -570,14 +569,14 @@ onUnmounted(() => {
   }
 
   &:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0);
   }
 }
 
 .training-screen {
   flex: 1;
   display: flex;
-  align-items: center;
+    align-items: center;
   justify-content: center;
   flex-direction: column;
   // 精确计算：100vh - 标题栏60px
@@ -630,7 +629,8 @@ onUnmounted(() => {
     @include flex-center;
     font-weight: $font-bold;
     color: $text-primary;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: none !important;
+    transform: none !important;
     cursor: pointer;
     aspect-ratio: 1;
     border-radius: $radius-md;
@@ -684,32 +684,16 @@ onUnmounted(() => {
       transition: opacity $transition-base;
     }
 
-    // 桌面端悬停效果
     @media (hover: hover) and (pointer: fine) {
-      &:hover:not(.correct):not(.error) {
-        background: linear-gradient(
-          135deg,
-          rgba(0, 212, 255, 0.15) 0%,
-          rgba(123, 44, 191, 0.1) 100%
-        );
-        transform: translateY(-4px) scale(1.02);
-        border-color: rgba(0, 212, 255, 0.6);
-        box-shadow:
-          0 12px 40px rgba(0, 212, 255, 0.4),
-          0 0 60px rgba(0, 212, 255, 0.2),
-          inset 0 1px 0 rgba(255, 255, 255, 0.2);
-
-        &::before {
-          opacity: 1;
-        }
+      &:hover {
+        transform: none !important;
+        box-shadow: none !important;
       }
     }
 
-    &:active:not(.correct):not(.error) {
-      transform: translateY(-2px) scale(0.98);
-      box-shadow:
-        0 6px 24px rgba(0, 212, 255, 0.3),
-        inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    &:active {
+      transform: none !important;
+      box-shadow: none !important;
     }
 
     &.correct {
@@ -805,7 +789,11 @@ onUnmounted(() => {
     inset: -4px;
     border-radius: $radius-full;
     padding: 4px;
-    background: linear-gradient(135deg, currentColor, transparent);
+    background: linear-gradient(
+      135deg,
+      currentColor 0%,
+      transparent 100%
+    );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -827,7 +815,6 @@ onUnmounted(() => {
     box-shadow:
       0 8px 32px rgba(0, 255, 136, 0.4),
       0 0 60px rgba(0, 255, 136, 0.2);
-    animation: successPulse 2s ease-in-out infinite;
   }
 
   &.timeout {
@@ -836,20 +823,6 @@ onUnmounted(() => {
     box-shadow:
       0 8px 32px rgba(255, 170, 0, 0.4),
       0 0 60px rgba(255, 170, 0, 0.2);
-  }
-}
-
-@keyframes successPulse {
-  0%,
-  100% {
-    box-shadow:
-      0 8px 32px rgba(0, 255, 136, 0.4),
-      0 0 60px rgba(0, 255, 136, 0.2);
-  }
-  50% {
-    box-shadow:
-      0 8px 32px rgba(0, 255, 136, 0.6),
-      0 0 80px rgba(0, 255, 136, 0.4);
   }
 }
 
@@ -877,7 +850,7 @@ onUnmounted(() => {
     @media (max-width: $breakpoint-sm) {
       // 移动端：横向布局，label和value在一行
       display: flex;
-      justify-content: space-between;
+            justify-content: space-between;
       align-items: center;
       padding: 12px 16px;
       text-align: left;
@@ -924,7 +897,7 @@ onUnmounted(() => {
 
 .result-actions {
   display: flex;
-  gap: $spacing-sm;
+    gap: $spacing-sm;
 
   button {
     @include button-reset;

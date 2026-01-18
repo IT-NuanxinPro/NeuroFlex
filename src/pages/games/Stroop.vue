@@ -93,6 +93,10 @@
               <span class="stat-value">{{ correctCount }}/{{ totalTrials }}</span>
             </div>
             <div class="stat-item">
+              <span class="stat-label">错误数</span>
+              <span class="stat-value">{{ wrongCount }}</span>
+            </div>
+            <div class="stat-item">
               <span class="stat-label">平均反应</span>
               <span class="stat-value">{{ avgReactionTime }}ms</span>
             </div>
@@ -122,6 +126,7 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import { colors, defaultTrials, timeLimitSeconds } from '@/config/stroop.js'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -130,14 +135,15 @@ const userStore = useUserStore()
 
 const difficulty = ref('basic')
 const timeMode = ref('standard') // 'standard' 或 'timed'
-const timeLimitSeconds = 3 // 限时模式每个字的时间限制
+// 颜色数组已移至配置 timeLimitSeconds // 限时模式每个字的时间限制
 const isTraining = ref(false)
 const showResult = ref(false)
 const currentWord = ref('')
 const currentColor = ref('')
 const currentAnswer = ref('')
 const correctCount = ref(0)
-const totalTrials = ref(20)
+const wrongCount = ref(0)
+const totalTrials = ref(defaultTrials)
 const currentTrial = ref(0)
 const trialStartTime = ref(0) // 每个字的开始时间
 const reactionTimes = ref([])
@@ -147,19 +153,6 @@ const timeoutCount = ref(0) // 超时次数
 const timeRemaining = ref(100) // 剩余时间百分比
 let timerInterval = null
 let timeoutTimer = null
-
-const colors = [
-  { name: 'red', value: '#ff3366', label: '红' },
-  { name: 'blue', value: '#00d4ff', label: '蓝' },
-  { name: 'green', value: '#00ff88', label: '绿' },
-  { name: 'yellow', value: '#ffaa00', label: '黄' },
-  { name: 'purple', value: '#7b2cbf', label: '紫' },
-  { name: 'orange', value: '#ff6b35', label: '橙' },
-  { name: 'pink', value: '#ff66cc', label: '粉' },
-  { name: 'white', value: '#ffffff', label: '白' },
-  { name: 'black', value: '#000000', label: '黑' }
-]
-
 const progress = computed(() => (currentTrial.value / totalTrials.value) * 100)
 
 // 结果统计
@@ -182,6 +175,7 @@ function startTraining() {
   isTraining.value = true
   showResult.value = false
   correctCount.value = 0
+  wrongCount.value = 0
   currentTrial.value = 0
   reactionTimes.value = []
   timeoutCount.value = 0
@@ -260,6 +254,8 @@ function selectColor(colorName) {
 
   if (colorName === currentAnswer.value) {
     correctCount.value++
+  } else {
+    wrongCount.value++
   }
 
   clearTimers()
@@ -281,10 +277,11 @@ function endTraining() {
     details: {
       correctCount: correctCount.value,
       totalTrials: totalTrials.value,
-      averageReactionTime: avgReactionTime.value,
+      Time: avgReactionTime.value,
       fastestTime: fastestTime.value,
       slowestTime: slowestTime.value,
-      timeoutCount: timeoutCount.value
+      timeoutCount: timeoutCount.value,
+      wrongCount: wrongCount.value
     }
   })
 }

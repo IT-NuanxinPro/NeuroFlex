@@ -75,7 +75,17 @@
 
         <div class="canvas-panel right-panel">
           <h3>🪞 右侧镜像（自动）</h3>
-          <canvas ref="rightCanvas"></canvas>
+          <canvas
+            ref="rightCanvas"
+            @mousedown="startDraw('right', $event)"
+            @mousemove="draw('right', $event)"
+            @mouseup="endDraw"
+            @mouseleave="endDraw"
+            @touchstart="startDraw('right', $event)"
+            @touchmove="draw('right', $event)"
+            @touchend="endDraw"
+          >
+          </canvas>
           <div class="mirror-overlay">镜像区域</div>
         </div>
       </div>
@@ -146,29 +156,16 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import { modes, templateOptions } from '@/config/mirror.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// 模式定义
-const modes = [
-  { value: 'open', name: '睁眼模式', desc: '基础难度', icon: '👁️' },
-  { value: 'closed', name: '闭眼模式', desc: '进阶难度', icon: '🙈' },
-  { value: 'fast', name: '快速模式', desc: '高级难度', icon: '⚡' },
-  { value: 'complex', name: '复杂图形', desc: '专家难度', icon: '🎨' }
-]
-
 // 配置
-const selectedMode = ref('open')
+const selectedMode = ref('different')
 const templateType = ref('free')
 
-const templateOptions = [
-  { label: '自由', value: 'free' },
-  { label: '画圆', value: 'circle' },
-  { label: '方形', value: 'square' },
-  { label: '波浪', value: 'wave' }
-]
 
 // 绘图状态
 const isDrawing = ref(false)
@@ -221,23 +218,53 @@ function initCanvas() {
   const width = leftCanvas.value.parentElement.clientWidth - 40
   const height = Math.min(width, 400)
 
-  // 初始化左侧画布
-  leftCanvas.value.width = width
-  leftCanvas.value.height = height
-  leftCtx = leftCanvas.value.getContext('2d')
-  leftCtx.strokeStyle = '#00d4ff'
-  leftCtx.lineWidth = 3
-  leftCtx.lineCap = 'round'
-  leftCtx.lineJoin = 'round'
+  ;[leftCanvas.value, rightCanvas.value].forEach(c => {
+    c.width = width
+    c.height = height
+  })
 
-  // 初始化右侧画布
-  rightCanvas.value.width = width
-  rightCanvas.value.height = height
+  leftCtx = leftCanvas.value.getContext('2d')
   rightCtx = rightCanvas.value.getContext('2d')
-  rightCtx.strokeStyle = '#ff3366'
-  rightCtx.lineWidth = 3
-  rightCtx.lineCap = 'round'
-  rightCtx.lineJoin = 'round'
+
+  ;[leftCtx, rightCtx].forEach(ctx => {
+    ctx.strokeStyle = '#00d4ff'
+    ctx.lineWidth = 3
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+  })
+
+  // 渲染模板参考线（仅辅助显示）
+  if (selectedMode.value === 'different') {
+    drawTemplate(leftCtx, 'circle', width, height)
+    drawTemplate(rightCtx, 'square', width, height)
+  } else if (selectedMode.value === 'same' && templateType.value !== 'free') {
+    drawTemplate(leftCtx, templateType.value, width, height)
+    drawTemplate(rightCtx, templateType.value, width, height)
+  }
+}
+
+function drawTemplate(ctx, type, w, h) {
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+  ctx.setLineDash([6, 6])
+  ctx.beginPath()
+  const pad = 20
+  if (type === 'circle') {
+    ctx.arc(w / 2, h / 2, (w - pad * 2) / 2, 0, Math.PI * 2)
+  } else if (type === 'square') {
+    ctx.rect(pad, pad, w - pad * 2, h - pad * 2)
+  } else if (type === 'wave') {
+    const amp = (h - pad * 2) / 4
+    const midY = h / 2
+    const steps = 20
+    for (let i = 0; i <= steps; i++) {
+      const x = (w / steps) * i
+      const y = midY + Math.sin((i / steps) * Math.PI * 2) * amp
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    }
+  }
+  ctx.stroke()
+  ctx.restore()
 }
 
 function getCanvasCoords(canvas, event) {
@@ -254,36 +281,31 @@ function startDraw(side, event) {
   drawing = true
   strokeCount.value++
 
-  const coords = getCanvasCoords(leftCanvas.value, event)
+  const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
+  const ctx = side === 'left' ? leftCtx : rightCtx
+  const coords = getCanvasCoords(canvas, event)
 
-  leftCtx.beginPath()
-  leftCtx.moveTo(coords.x, coords.y)
+  ctx.beginPath()
+  ctx.moveTo(coords.x, coords.y)
 
-  rightCtx.beginPath()
-  // 镜像：x 坐标取反
-  const mirrorX = rightCanvas.value.width - coords.x
-  rightCtx.moveTo(mirrorX, coords.y)
-
-  leftPaths.push({ x: coords.x, y: coords.y, t: Date.now() })
-  rightPaths.push({ x: mirrorX, y: coords.y, t: Date.now() })
+  const pathArray = side === 'left' ? leftPaths : rightPaths
+  pathArray.push({ x: coords.x, y: coords.y, t: Date.now() })
 }
 
 function draw(side, event) {
   if (!drawing) return
   event.preventDefault()
 
-  const coords = getCanvasCoords(leftCanvas.value, event)
+  const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
+  const ctx = side === 'left' ? leftCtx : rightCtx
 
-  leftCtx.lineTo(coords.x, coords.y)
-  leftCtx.stroke()
+  const coords = getCanvasCoords(canvas, event)
 
-  // 镜像绘制
-  const mirrorX = rightCanvas.value.width - coords.x
-  rightCtx.lineTo(mirrorX, coords.y)
-  rightCtx.stroke()
+  ctx.lineTo(coords.x, coords.y)
+  ctx.stroke()
 
-  leftPaths.push({ x: coords.x, y: coords.y, t: Date.now() })
-  rightPaths.push({ x: mirrorX, y: coords.y, t: Date.now() })
+  const pathArray = side === 'left' ? leftPaths : rightPaths
+  pathArray.push({ x: coords.x, y: coords.y, t: Date.now() })
 }
 
 function endDraw() {
@@ -491,9 +513,7 @@ function goBack() {
 }
 
 .mode-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-md;
+  @include button-grid;
 
   @media (max-width: $breakpoint-sm) {
     grid-template-columns: 1fr;

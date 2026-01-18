@@ -33,16 +33,13 @@ function selectOption(value) {
 
 <style lang="scss" scoped>
 .button-group-select {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
+  @include button-grid(70px,$spacing-sm);
   width: 100%;
 
   .option-button {
     @include button-reset;
     @include click-feedback;
-    flex: 1 1 auto;
-    min-width: 100px;
+    min-width: 70px;
     padding: $spacing-md;
     border-radius: $radius-md;
     background: rgba(255, 255, 255, 0.05);

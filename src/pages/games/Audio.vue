@@ -176,27 +176,16 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import { backgroundOptions, digitCountOptions, snrOptions } from '@/config/audio.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
 // 配置
-const signalNoiseRatio = ref(30)
+const signalNoiseRatio = ref(snrOptions[0])
 const backgroundType = ref('white')
 const digitCount = ref('6')
-
-const backgroundOptions = [
-  { label: '白噪音', value: 'white' },
-  { label: '流行', value: 'music' },
-  { label: '摇滚', value: 'rock' }
-]
-
-const digitCountOptions = [
-  { label: '6个', value: '6' },
-  { label: '8个', value: '8' },
-  { label: '9个', value: '9' }
-]
 
 // 训练状态
 const isTraining = ref(false)
@@ -220,6 +209,7 @@ const currentInputCount = computed(() => {
 
 let audioContext = null
 let playTimer = null
+let backgroundGainNode = null
 let currentAudio = null
 
 function generateDigitSequence() {
@@ -238,6 +228,14 @@ function initAudioContext() {
 }
 
 function playDigitSound(digit) {
+  // 临时降低背景噪音
+  if (backgroundGainNode) {
+    const originalGain = backgroundGainNode.gain.value
+    backgroundGainNode.gain.setValueAtTime(originalGain * 0.2, initAudioContext().currentTime)
+    setTimeout(() => {
+      backgroundGainNode.gain.setValueAtTime(originalGain, initAudioContext().currentTime)
+    }, 800)
+  }
   const ctx = initAudioContext()
 
   // 使用Web Speech API播放数字
@@ -269,6 +267,7 @@ function playBackgroundNoise() {
   source.loop = true
 
   const gainNode = ctx.createGain()
+  backgroundGainNode = gainNode
   // 根据信噪比计算背景音量
   // SNR 30% = 背景音 0.15 (很小)
   // SNR 20% = 背景音 0.25 (中等)
@@ -560,9 +559,7 @@ onUnmounted(() => {
 }
 
 .button-group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-sm;
+ @include button-grid(80px);
 
   .snr-button {
     @include button-reset;
@@ -574,6 +571,9 @@ onUnmounted(() => {
     color: $text-primary;
     font-weight: $font-medium;
     transition: all $transition-base;
+    @media (max-width: $breakpoint-sm) {
+      padding: $spacing-sm;
+    }
 
     &.active {
       background: rgba(0, 212, 255, 0.1);

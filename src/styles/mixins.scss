@@ -55,6 +55,13 @@
   border: 1px solid $glass-border;
   box-shadow: $glass-shadow;
   border-radius: $radius-lg;
+
+  // 移动端性能优化：减少阴影和模糊
+  @media (max-width: $breakpoint-sm) {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
 }
 
 // Flexbox 居中
@@ -140,17 +147,33 @@
 
 // 悬停效果
 @mixin hover-lift {
-  transition:
-    transform $transition-base,
-    box-shadow $transition-base;
+  transition: transform $transition-base;
 
-  &:hover {
-    transform: translateY(-4px);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: $shadow-lg;
+    }
     box-shadow: $shadow-xl;
   }
 }
 
 // 点击反馈
+@mixin click-feedback {
+  transition: transform $transition-fast;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// 按钮自适应网格
+@mixin button-grid($min: 100px,$gap: $spacing-md) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax($min, 1fr));
+  gap: $gap;
+}
+
 @mixin click-feedback {
   transition: transform $transition-fast;
 

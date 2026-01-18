@@ -18,12 +18,12 @@
           <label>物品数量</label>
           <div class="button-group">
             <button
-              v-for="count in [5, 7, 9, 12]"
-              :key="count"
-              :class="['count-button', { active: itemCount === count }]"
-              @click="itemCount = count"
+              v-for="opt in itemCountOptions"
+              :key="opt.value"
+              :class="['count-button', { active: itemCount === parseInt(opt.value) }]"
+              @click="itemCount = parseInt(opt.value)"
             >
-              {{ count }}个
+              {{ opt.label }}
             </button>
           </div>
           <p class="config-hint">
@@ -213,35 +213,15 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { itemPool, itemCountOptions } from '@/config/memoryStory.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// 物品库
-const itemPool = [
-  { name: '雨伞', icon: '☂️' },
-  { name: '火车', icon: '🚂' },
-  { name: '面包', icon: '🍞' },
-  { name: '吉他', icon: '🎸' },
-  { name: '云朵', icon: '☁️' },
-  { name: '钥匙', icon: '🔑' },
-  { name: '书本', icon: '📖' },
-  { name: '咖啡', icon: '☕' },
-  { name: '花朵', icon: '🌸' },
-  { name: '月亮', icon: '🌙' },
-  { name: '自行车', icon: '🚲' },
-  { name: '帽子', icon: '🎩' },
-  { name: '相机', icon: '📷' },
-  { name: '蜡烛', icon: '🕯️' },
-  { name: '气球', icon: '🎈' },
-  { name: '手表', icon: '⌚' },
-  { name: '眼镜', icon: '👓' },
-  { name: '地图', icon: '🗺️' }
-]
 
 // 配置
-const itemCount = ref(5)
+const itemCount = ref(parseInt(itemCountOptions[0].value))
 
 // 训练状态
 const isTraining = ref(false)
@@ -444,6 +424,9 @@ onUnmounted(() => {
   padding: $spacing-2xl;
   max-width: 700px;
   width: 100%;
+  @media screen and (max-width: $breakpoint-sm) {
+    padding: $spacing-lg;
+  }
 
   h2 {
     text-align: center;
@@ -469,9 +452,7 @@ onUnmounted(() => {
 }
 
 .button-group {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $spacing-sm;
+  @include button-grid(70px,$spacing-sm);
 
   .count-button {
     @include button-reset;

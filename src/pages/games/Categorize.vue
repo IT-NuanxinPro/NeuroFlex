@@ -44,12 +44,13 @@
     <div v-if="isTraining" class="training-screen">
       <div class="rules-display">
         <h3>分类规则</h3>
-        <p v-if="dimensions === 1">请说出物品的<strong>品类</strong></p>
-        <p v-else>请说出物品的<strong>品类+价格等级</strong>（高价>10元，低价≤10元）</p>
+        <p v-if="dimensions === 1">请选择物品的<strong>品类</strong></p>
+        <p v-else>请选择物品的<strong>品类+价格等级</strong>（高价&gt;10元，低价≤10元）</p>
       </div>
 
       <div class="progress-info">
-        <p>进度: {{ currentIndex }} / {{ items.length }}</p>
+        <p class="progress-text">{{ currentIndex }} / {{ items.length }}</p>
+        <p class="remaining-time">{{ (remainingMs / 1000).toFixed(1) }}s</p>
       </div>
 
       <div class="item-display" v-if="currentItem">
@@ -132,47 +133,18 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import { itemPool, itemCountOptions, displayTimeOptions } from '@/config/categorize.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// 物品库
-const itemPool = [
-  { name: '面包', category: '食品', price: 5, icon: '🍞' },
-  { name: '蛋糕', category: '食品', price: 15, icon: '🍰' },
-  { name: '苹果', category: '食品', price: 3, icon: '🍎' },
-  { name: '牛排', category: '食品', price: 50, icon: '🥩' },
-  { name: '铅笔', category: '文具', price: 2, icon: '✏️' },
-  { name: '笔记本', category: '文具', price: 8, icon: '📓' },
-  { name: '钢笔', category: '文具', price: 25, icon: '🖊️' },
-  { name: '书包', category: '文具', price: 80, icon: '🎒' },
-  { name: '牙刷', category: '日用品', price: 10, icon: '🪥' },
-  { name: '毛巾', category: '日用品', price: 15, icon: '🧻' },
-  { name: '雨伞', category: '日用品', price: 30, icon: '☂️' },
-  { name: '水杯', category: '日用品', price: 20, icon: '🥤' },
-  { name: '手机', category: '电子产品', price: 3000, icon: '📱' },
-  { name: '耳机', category: '电子产品', price: 200, icon: '🎧' },
-  { name: '充电宝', category: '电子产品', price: 100, icon: '🔋' },
-  { name: 'U盘', category: '电子产品', price: 50, icon: '💾' }
-]
+// 物品库已移至配置
 
 // 配置
 const dimensions = ref(1)
 const itemCount = ref('10')
-const displayTime = ref('2000')
-
-const itemCountOptions = [
-  { label: '10个', value: '10' },
-  { label: '15个', value: '15' },
-  { label: '20个', value: '20' }
-]
-
-const displayTimeOptions = [
-  { label: '2秒', value: '2000' },
-  { label: '1.5秒', value: '1500' },
-  { label: '1秒', value: '1000' }
-]
+const displayTime = ref('2500')
 
 // 训练状态
 const isTraining = ref(false)
@@ -186,7 +158,10 @@ const userAnswer = ref('')
 const showFeedback = ref(false)
 const results = ref([])
 const reactionTimes = ref([])
+let itemTimer = null
 const itemStartTime = ref(0)
+const remainingMs = ref(0)
+let countdownInterval = null
 
 const correctCount = computed(() => results.value.filter(r => r.correct).length)
 const accuracy = computed(() => correctCount.value / items.value.length)
@@ -238,6 +213,11 @@ function startTraining() {
 }
 
 function showNextItem() {
+  if (itemTimer) {
+    clearTimeout(itemTimer)
+    itemTimer = null
+  }
+  if (countdownInterval) clearInterval(countdownInterval)
   if (currentIndex.value >= items.value.length) {
     endTraining()
     return
@@ -256,9 +236,38 @@ function showNextItem() {
   showFeedback.value = false
   userAnswer.value = ''
   itemStartTime.value = Date.now()
+  remainingMs.value = parseInt(displayTime.value)
+  countdownInterval = setInterval(() => {
+    remainingMs.value -= 100
+    if (remainingMs.value <= 0) {
+      clearInterval(countdownInterval)
+      countdownInterval = null
+    }
+  }, 100)
+
+  // 如果在限定时间内未作答，自动判错并进入下一题
+  itemTimer = setTimeout(() => {
+    const reactionTime = parseInt(displayTime.value)
+    reactionTimes.value.push(reactionTime)
+
+    results.value.push({
+      item: currentItem.value.name,
+      userAnswer: '(超时)',
+      correctAnswer: correctAnswer.value,
+      correct: false,
+      reactionTime
+    })
+
+    currentIndex.value++
+    showNextItem()
+  }, parseInt(displayTime.value))
 }
 
 function selectAnswer(option) {
+  if (itemTimer) {
+    clearTimeout(itemTimer)
+    itemTimer = null
+  }
   if (showFeedback.value) return
 
   const reactionTime = Date.now() - itemStartTime.value
@@ -378,6 +387,9 @@ function goBack() {
   padding: $spacing-2xl;
   max-width: 500px;
   width: 100%;
+  @media (max-width: $breakpoint-sm) {
+    padding:$spacing-lg;
+  }
 
   h2 {
     text-align: center;
@@ -396,9 +408,7 @@ function goBack() {
 }
 
 .button-group {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-sm;
+  @include button-grid;
 
   .dim-button {
     @include button-reset;
@@ -410,6 +420,9 @@ function goBack() {
     color: $text-primary;
     font-weight: $font-medium;
     transition: all $transition-base;
+     @media (max-width: $breakpoint-sm) {
+      padding:$spacing-sm;
+    }
 
     &.active {
       background: rgba(0, 212, 255, 0.1);
@@ -489,9 +502,23 @@ function goBack() {
 }
 
 .progress-info {
-  text-align: center;
-  font-size: $font-lg;
-  color: $text-secondary;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+
+  .progress-text {
+    font-size: $font-base;
+    color: $text-secondary;
+  }
+
+  .remaining-time {
+    font-size: clamp(2rem, 8vw, 3rem);
+    font-weight: $font-bold;
+    color: $accent-primary;
+    letter-spacing: 1px;
+  }
 }
 
 .item-display {
@@ -502,10 +529,16 @@ function goBack() {
     @include glass-card;
     padding: $spacing-3xl;
     text-align: center;
-    min-width: 300px;
+    min-width: 240px;
+      width: 100%;
+
+      @media (max-width: $breakpoint-sm) {
+        padding: $spacing-xl;
+        min-width: 0;
+      }
 
     .item-icon {
-      font-size: 6rem;
+      font-size: clamp(3rem, 10vw, 5rem);
       margin-bottom: $spacing-lg;
     }
 
@@ -526,13 +559,10 @@ function goBack() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%; box-sizing: border-box;
+  padding: 0 $spacing-md;
 
-  @media (max-width: $breakpoint-sm) {
-    grid-template-columns: 1fr;
-  }
-
+  
   .option-button {
     @include button-reset;
     @include glass-card;
