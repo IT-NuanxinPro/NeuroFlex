@@ -1,0 +1,211 @@
+# ===========================
+# Dependencies
+# ===========================
+node_modules/
+jspm_packages/
+bower_components/
+
+# ===========================
+# Build Output
+# ===========================
+dist/
+dist-ssr/
+build/
+out/
+.output/
+.nuxt/
+.next/
+.cache/
+.parcel-cache/
+.vite/
+*.local
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================
+# Environment Variables
+# ===========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ===========================
+# Editor & IDE
+# ===========================
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.history/
+
+# JetBrains IDEs (WebStorm, IntelliJ, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw[a-z]
+*.un~
+Session.vim
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===========================
+# AI Assistants
+# ===========================
+.claude/
+.kiro/
+.cursor/
+.copilot/
+.codeium/
+.tabnine/
+.aider/
+.continue/
+
+# ===========================
+# Operating System
+# ===========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# ===========================
+# Testing
+# ===========================
+coverage/
+*.lcov
+.nyc_output/
+.grunt/
+.lock-wscript
+lib-cov/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ===========================
+# Package Managers
+# ===========================
+
+# npm
+package-lock.json
+npm-debug.log*
+
+# Yarn
+yarn.lock
+.yarn/
+.yarn-integrity
+.pnp.*
+
+# pnpm
+pnpm-lock.yaml
+.pnpm-debug.log*
+
+# ===========================
+# Temporary Files
+# ===========================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+
+# ===========================
+# Misc
+# ===========================
+.eslintcache
+.stylelintcache
+.sass-cache/
+*.css.map
+*.sass.map
+*.scss.map
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vuepress/dist
+.docusaurus
+.serverless/
+.fusebox/
+.shared
+
+# ===========================
+# Optional: Uncomment if needed
+# ===========================
+# .vscode/
+# .idea/
+# *.log

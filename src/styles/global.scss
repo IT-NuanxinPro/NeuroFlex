@@ -1,0 +1,234 @@
+@use 'sass:color';
+@use './variables.scss' as *;
+@use './mixins.scss' as *;
+
+// CSS 重置
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: $font-base;
+  font-weight: $font-normal;
+  line-height: 1.6;
+  color: $text-primary;
+  background-color: $bg-primary;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+// 链接
+a {
+  color: $accent-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: color.adjust($accent-primary, $lightness: 10%);
+  }
+}
+
+// 按钮
+button {
+  @include button-reset;
+}
+
+// 输入框
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+// 图片
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// 列表
+ul,
+ol {
+  list-style: none;
+}
+
+// 标题
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: $font-semibold;
+  line-height: 1.2;
+  margin-bottom: $spacing-md;
+}
+
+h1 {
+  font-size: $font-3xl;
+}
+h2 {
+  font-size: $font-2xl;
+}
+h3 {
+  font-size: $font-xl;
+}
+h4 {
+  font-size: $font-lg;
+}
+h5 {
+  font-size: $font-base;
+}
+h6 {
+  font-size: $font-sm;
+}
+
+// 段落
+p {
+  margin-bottom: $spacing-md;
+}
+
+// 滚动条 - 完全隐藏
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+// Firefox 隐藏滚动条
+* {
+  scrollbar-width: none;
+}
+
+// IE 隐藏滚动条
+* {
+  -ms-overflow-style: none;
+}
+
+// 选中文本
+::selection {
+  background-color: $accent-primary;
+  color: $text-primary;
+}
+
+// 焦点样式
+:focus-visible {
+  outline: 2px solid $accent-primary;
+  outline-offset: 2px;
+}
+
+// 禁用状态
+[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+// 工具类
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 $spacing-md;
+
+  @include respond-to(md) {
+    padding: 0 $spacing-lg;
+  }
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  @include flex-center;
+}
+
+.grid {
+  display: grid;
+}
+
+.hidden {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// 响应式工具类
+@include respond-to(sm) {
+  .sm\:hidden {
+    display: none;
+  }
+  .sm\:block {
+    display: block;
+  }
+}
+
+@include respond-to(md) {
+  .md\:hidden {
+    display: none;
+  }
+  .md\:block {
+    display: block;
+  }
+}
+
+@include respond-to(lg) {
+  .lg\:hidden {
+    display: none;
+  }
+  .lg\:block {
+    display: block;
+  }
+}
