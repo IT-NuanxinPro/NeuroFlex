@@ -153,24 +153,6 @@ playwright-report/
 playwright/.cache/
 
 # ===========================
-# Package Managers
-# ===========================
-
-# npm
-package-lock.json
-npm-debug.log*
-
-# Yarn
-yarn.lock
-.yarn/
-.yarn-integrity
-.pnp.*
-
-# pnpm
-pnpm-lock.yaml
-.pnpm-debug.log*
-
-# ===========================
 # Temporary Files
 # ===========================
 *.tmp
