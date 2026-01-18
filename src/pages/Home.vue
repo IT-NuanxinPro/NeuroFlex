@@ -2,7 +2,7 @@
   <div class="home-page">
     <!-- 顶部栏 -->
     <header class="top-bar">
-      <h1 class="title">NeuroFlex 认知训练中心</h1>
+      <NeuroFlexLogo />
       <div class="user-actions">
         <button class="icon-button" @click="goToSettings" aria-label="设置">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -38,6 +38,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { staggerFadeIn } from '@/utils/animations'
+import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
 
 const router = useRouter()
 const gridRef = ref(null)
@@ -135,23 +136,6 @@ onMounted(() => {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
-  .title {
-    font-size: clamp($font-base, 4vw, $font-xl);
-    font-weight: $font-bold;
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-
-    @media (max-width: $breakpoint-sm) {
-      font-size: $font-lg;
-      letter-spacing: 0.02em;
-    }
-  }
-
   .icon-button {
     @include button-reset;
     @include click-feedback;
@@ -211,9 +195,15 @@ onMounted(() => {
     height: 60px;
     margin: 0 auto $spacing-lg;
     border-radius: $radius-md;
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
+    border: 1px solid rgba(0, 212, 255, 0.2);
     @include flex-center;
     font-size: $font-3xl;
+    
+    svg {
+      color: $accent-primary;
+      filter: drop-shadow(0 2px 4px rgba(0, 212, 255, 0.3));
+    }
   }
 
   .card-title {

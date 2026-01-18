@@ -8,29 +8,12 @@
       <!-- 用户信息卡片 -->
       <div class="profile-card">
         <div class="avatar-section">
-          <div class="avatar-wrapper" @click="triggerAvatarUpload">
-            <img
-              v-if="userStore.profile.avatar"
-              :src="userStore.profile.avatar"
-              alt="头像"
-              class="avatar-image"
-            />
-            <div v-else class="avatar-placeholder">
-              <svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                />
-              </svg>
-            </div>
-            <div class="avatar-overlay">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
-                />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </div>
-          </div>
+          <UserAvatar
+            :src="userStore.profile.avatar"
+            :size="100"
+            :clickable="true"
+            @click="triggerAvatarUpload"
+          />
           <input
             ref="avatarInput"
             type="file"
@@ -129,6 +112,7 @@
 import { ref, watch, nextTick } from 'vue'
 import { useUserStore } from '@/stores/user'
 import Modal from '@/components/Modal.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { downloadData } from '@/utils/storage'
 
 const userStore = useUserStore()
@@ -298,53 +282,11 @@ watch(showEditModal, val => {
 
   .avatar-section {
     flex-shrink: 0;
-  }
-
-  .avatar-wrapper {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    border-radius: $radius-full;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform $transition-base;
-
-    &:hover {
-      transform: scale(1.05);
-
-      .avatar-overlay {
-        opacity: 1;
-      }
-    }
-
+    
     @media (max-width: $breakpoint-sm) {
-      width: 80px;
-      height: 80px;
+      display: flex;
+      justify-content: center;
     }
-  }
-
-  .avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    @include flex-center;
-    color: $text-primary;
-  }
-
-  .avatar-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    @include flex-center;
-    color: white;
-    opacity: 0;
-    transition: opacity $transition-base;
   }
 
   .user-info {

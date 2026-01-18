@@ -14,7 +14,7 @@ const routes = [
         path: 'home',
         name: 'Home',
         component: () => import('@/pages/Home.vue'),
-        meta: { title: 'NeuroFlex  认知训练中心', depth: 1 }
+        meta: { title: 'NeuroFlex  科学认知训练', depth: 1 }
       },
       {
         path: 'record',
