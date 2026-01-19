@@ -140,7 +140,6 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import { gridSizes, modeOptions, timeLimitMap } from '@/config/schulte.js'
-// 动画已移除
 import { Switch as VanSwitch } from 'vant'
 import 'vant/lib/switch/style'
 
@@ -405,8 +404,8 @@ onUnmounted(() => {
     0 20px 60px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
-    padding: 20px;
+  @include mobile {
+    padding: $fluid-spacing-lg;
     max-width: 90vw;
     margin: 0 auto;
   }
@@ -420,9 +419,9 @@ onUnmounted(() => {
     -webkit-text-fill-color: transparent;
     background-clip: text;
 
-    @media (max-width: $breakpoint-sm) {
-      font-size: 20px;
-      margin-bottom: 20px;
+    @include mobile {
+      font-size: $fluid-font-xl;
+      margin-bottom: $fluid-spacing-lg;
     }
   }
 }
@@ -450,8 +449,8 @@ onUnmounted(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: $spacing-md;
 
-  @media (max-width: $breakpoint-sm) {
-    gap: 8px;
+  @include mobile {
+    gap: $spacing-sm;
   }
 
   .size-button {
@@ -467,9 +466,9 @@ onUnmounted(() => {
     transition: all $transition-base;
     position: relative;
 
-    @media (max-width: $breakpoint-sm) {
-      padding: 12px;
-      font-size: 14px;
+    @include mobile {
+      padding: $spacing-md;
+      font-size: $fluid-font-sm;
     }
 
     &.active {
@@ -537,9 +536,9 @@ onUnmounted(() => {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
-    padding: 14px;
-    font-size: 16px;
+  @include mobile {
+    padding: $spacing-md;
+    font-size: $font-base;
   }
 
   &::before {
@@ -585,8 +584,8 @@ onUnmounted(() => {
   overflow: hidden;
   position: relative;
 
-  @media (max-width: $breakpoint-sm) {
-    padding: 16px;
+  @include mobile {
+    padding: $spacing-md;
   }
 }
 
@@ -612,7 +611,7 @@ onUnmounted(() => {
   );
   max-height: calc(100vh - 60px - 48px - 120px);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     // 移动端：根据格子数量动态调整间距
     // 3×3: 18px大间距, 5×5: 12px, 7×7: 8px, 9×9: 5px
     gap: calc(24px - var(--grid-size) * 2px);
@@ -641,11 +640,11 @@ onUnmounted(() => {
     // 3×3: 3.4rem, 5×5: 2.5rem, 7×7: 1.8rem, 9×9: 1.3rem
     font-size: calc(4rem - var(--grid-size) * 0.3rem);
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       // 移动端：更大的字体，方便识别
       // 3×3: 2.3rem, 5×5: 1.7rem, 7×7: 1.25rem, 9×9: 0.9rem
       font-size: calc(2.9rem - var(--grid-size) * 0.2rem);
-      border-radius: 8px;
+      border-radius: $radius-sm;
     }
 
     // 玻璃拟态背景
@@ -664,7 +663,7 @@ onUnmounted(() => {
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       border-width: 1px;
       box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.3),
@@ -732,12 +731,12 @@ onUnmounted(() => {
   min-width: 200px;
   z-index: 50;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     min-width: auto;
-    padding: 16px;
-    bottom: 16px;
-    right: 16px;
-    font-size: 14px;
+    padding: $spacing-md;
+    bottom: $spacing-md;
+    right: $spacing-md;
+    font-size: $fluid-font-sm;
   }
 
   p {
@@ -745,9 +744,9 @@ onUnmounted(() => {
     color: $text-secondary;
     font-weight: $font-medium;
 
-    @media (max-width: $breakpoint-sm) {
-      margin-bottom: 6px;
-      font-size: 12px;
+    @include mobile {
+      margin-bottom: $spacing-xs;
+      font-size: $font-xs;
     }
 
     &:last-child {
@@ -761,9 +760,9 @@ onUnmounted(() => {
       display: inline-block;
       margin: 0 $spacing-xs;
 
-      @media (max-width: $breakpoint-sm) {
-        font-size: 24px;
-        margin: 0 4px;
+      @include mobile {
+        font-size: $fluid-font-2xl;
+        margin: 0 $spacing-xs;
       }
     }
   }
@@ -777,10 +776,10 @@ onUnmounted(() => {
   @include flex-center;
   position: relative;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     width: 80px;
     height: 80px;
-    margin-bottom: 16px;
+    margin-bottom: $spacing-md;
   }
 
   &::before {
@@ -803,7 +802,7 @@ onUnmounted(() => {
   }
 
   svg {
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       width: 48px;
       height: 48px;
     }
@@ -832,11 +831,11 @@ onUnmounted(() => {
   gap: $spacing-lg;
   margin: $spacing-2xl 0;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     // 移动端：垂直堆叠，每行一个stat
     grid-template-columns: 1fr;
-    gap: 12px;
-    margin: 20px 0;
+    gap: $spacing-md;
+    margin: $fluid-spacing-lg 0;
   }
 
   .stat {
@@ -847,12 +846,12 @@ onUnmounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.08);
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       // 移动端：横向布局，label和value在一行
       display: flex;
             justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
+      padding: $spacing-md $spacing-lg;
       text-align: left;
     }
 
@@ -871,9 +870,9 @@ onUnmounted(() => {
       text-transform: uppercase;
       letter-spacing: 0.05em;
 
-      @media (max-width: $breakpoint-sm) {
+      @include mobile {
         margin-bottom: 0;
-        font-size: 13px;
+        font-size: $fluid-font-sm;
         text-transform: none;
         letter-spacing: 0;
       }
@@ -888,8 +887,8 @@ onUnmounted(() => {
       -webkit-text-fill-color: transparent;
       background-clip: text;
 
-      @media (max-width: $breakpoint-sm) {
-        font-size: 18px;
+      @include mobile {
+        font-size: $fluid-font-lg;
       }
     }
   }
@@ -909,7 +908,7 @@ onUnmounted(() => {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }

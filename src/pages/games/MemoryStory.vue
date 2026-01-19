@@ -424,7 +424,7 @@ onUnmounted(() => {
   padding: $spacing-2xl;
   max-width: 700px;
   width: 100%;
-  @media screen and (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-lg;
   }
 
@@ -540,7 +540,7 @@ onUnmounted(() => {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -829,7 +829,7 @@ onUnmounted(() => {
     grid-template-columns: repeat(2, 1fr);
     gap: $spacing-lg;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       grid-template-columns: 1fr;
     }
 
@@ -878,7 +878,7 @@ onUnmounted(() => {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }

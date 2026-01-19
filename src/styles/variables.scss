@@ -20,7 +20,7 @@ $glass-border: rgba(255, 255, 255, 0.1);
 $glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 $glass-backdrop: blur(10px);
 
-// 间距
+// 间距 - 静态值（用于不需要响应的场景）
 $spacing-xs: 0.25rem; // 4px
 $spacing-sm: 0.5rem; // 8px
 $spacing-md: 1rem; // 16px
@@ -29,13 +29,21 @@ $spacing-xl: 2rem; // 32px
 $spacing-2xl: 3rem; // 48px
 $spacing-3xl: 4rem; // 64px
 
+// 流式间距 - 自动响应式（移动端 → 桌面端）
+$fluid-spacing-xs: clamp(0.125rem, 0.5vw, 0.25rem); // 2px ~ 4px
+$fluid-spacing-sm: clamp(0.25rem, 1vw, 0.5rem); // 4px ~ 8px
+$fluid-spacing-md: clamp(0.5rem, 2vw, 1rem); // 8px ~ 16px
+$fluid-spacing-lg: clamp(0.75rem, 3vw, 1.5rem); // 12px ~ 24px
+$fluid-spacing-xl: clamp(1rem, 4vw, 2rem); // 16px ~ 32px
+$fluid-spacing-2xl: clamp(1.5rem, 5vw, 3rem); // 24px ~ 48px
+
 // 圆角
 $radius-sm: 0.5rem; // 8px
 $radius-md: 1rem; // 16px
 $radius-lg: 1.5rem; // 24px
 $radius-full: 9999px;
 
-// 字体大小
+// 字体大小 - 静态值
 $font-xs: 0.75rem; // 12px
 $font-sm: 0.875rem; // 14px
 $font-base: 1rem; // 16px
@@ -43,6 +51,15 @@ $font-lg: 1.125rem; // 18px
 $font-xl: 1.25rem; // 20px
 $font-2xl: 1.5rem; // 24px
 $font-3xl: 2rem; // 32px
+
+// 流式字体 - 自动响应式（移动端 → 桌面端）
+$fluid-font-xs: clamp(0.625rem, 1.5vw, 0.75rem); // 10px ~ 12px
+$fluid-font-sm: clamp(0.75rem, 2vw, 0.875rem); // 12px ~ 14px
+$fluid-font-base: clamp(0.875rem, 2.5vw, 1rem); // 14px ~ 16px
+$fluid-font-lg: clamp(1rem, 3vw, 1.125rem); // 16px ~ 18px
+$fluid-font-xl: clamp(1.125rem, 3.5vw, 1.25rem); // 18px ~ 20px
+$fluid-font-2xl: clamp(1.25rem, 4vw, 1.5rem); // 20px ~ 24px
+$fluid-font-3xl: clamp(1.5rem, 5vw, 2rem); // 24px ~ 32px
 
 // 字重
 $font-normal: 400;

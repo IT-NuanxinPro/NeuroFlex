@@ -381,7 +381,7 @@ function goBack() {
   max-width: 600px;
   width: 100%;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-lg $spacing-md;
   }
 
@@ -414,7 +414,7 @@ function goBack() {
     font-weight: $font-medium;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-xs;
     }
 
@@ -448,7 +448,7 @@ function goBack() {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -539,7 +539,7 @@ function goBack() {
   gap: $spacing-md;
   margin-bottom: $spacing-xl;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     grid-template-columns: repeat(3, 1fr);
   }
 
@@ -667,7 +667,7 @@ function goBack() {
     grid-template-columns: repeat(2, 1fr);
     gap: $spacing-lg;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       grid-template-columns: 1fr;
     }
     .comparison-column {
@@ -711,7 +711,7 @@ function goBack() {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }

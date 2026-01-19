@@ -29,7 +29,7 @@
   }
 }
 
-// 安全区域混入
+// 安全区域兼容
 @mixin safe-area-padding($position: all) {
   @if $position == top {
     padding-top: calc(#{$spacing-md} + var(--safe-area-inset-top));
@@ -172,10 +172,74 @@
   gap: $gap;
 }
 
-@mixin click-feedback {
-  transition: transform $transition-fast;
+// ============================================
+// 现代响应式 Mixin（使用 clamp + Container Queries）
+// ============================================
 
-  &:active {
-    transform: scale(0.98);
+// 移动端适配（max-width）
+@mixin mobile {
+  @media (max-width: $breakpoint-sm) {
+    @content;
   }
+}
+
+// 平板端适配
+@mixin tablet {
+  @media (max-width: $breakpoint-md) {
+    @content;
+  }
+}
+
+// 仅桌面端悬停（触摸设备不触发）
+@mixin hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @content;
+    }
+  }
+}
+
+// 容器查询 - 需要父元素设置 container-type
+@mixin container($name: null) {
+  @if $name {
+    container-name: $name;
+  }
+  container-type: inline-size;
+}
+
+// 容器查询断点
+@mixin container-sm($name: null) {
+  @if $name {
+    @container #{$name} (max-width: 480px) {
+      @content;
+    }
+  } @else {
+    @container (max-width: 480px) {
+      @content;
+    }
+  }
+}
+
+@mixin container-md($name: null) {
+  @if $name {
+    @container #{$name} (max-width: 768px) {
+      @content;
+    }
+  } @else {
+    @container (max-width: 768px) {
+      @content;
+    }
+  }
+}
+
+// 自适应网格（无需媒体查询）
+@mixin auto-grid($min: 200px, $gap: $fluid-spacing-md) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, $min), 1fr));
+  gap: $gap;
+}
+
+// 流式内边距
+@mixin fluid-padding($y: $fluid-spacing-md, $x: $fluid-spacing-lg) {
+  padding: $y $x;
 }

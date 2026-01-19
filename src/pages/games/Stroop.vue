@@ -429,7 +429,7 @@ onUnmounted(() => {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -489,7 +489,7 @@ onUnmounted(() => {
   margin-bottom: $spacing-xl;
   flex: 0 0 auto;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     grid-template-columns: repeat(2, 1fr);
     gap: $spacing-sm;
   }
@@ -504,7 +504,7 @@ onUnmounted(() => {
     color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-lg;
       font-size: $font-lg;
     }
@@ -556,7 +556,7 @@ onUnmounted(() => {
   gap: $spacing-lg;
   margin-bottom: $spacing-2xl;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     grid-template-columns: 1fr;
     gap: $spacing-md;
   }
@@ -597,7 +597,7 @@ onUnmounted(() => {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }

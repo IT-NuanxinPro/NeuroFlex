@@ -515,7 +515,7 @@ function goBack() {
 .mode-grid {
   @include button-grid;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     grid-template-columns: 1fr;
   }
 
@@ -570,7 +570,7 @@ function goBack() {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -615,7 +615,7 @@ function goBack() {
     flex-shrink: 0;
   }
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     font-size: $font-xs;
     padding: $spacing-sm $spacing-md;
   }
@@ -627,7 +627,7 @@ function goBack() {
   gap: $spacing-md;
   min-height: 400px;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     flex-direction: column;
   }
 
@@ -685,7 +685,7 @@ function goBack() {
     justify-content: center;
     color: $accent-primary;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       width: 100%;
       height: 2px;
       background: linear-gradient(90deg, transparent, $accent-primary, transparent);
@@ -772,7 +772,7 @@ function goBack() {
     grid-template-columns: repeat(2, 1fr);
     gap: $spacing-lg;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       grid-template-columns: 1fr;
     }
 
@@ -810,7 +810,7 @@ function goBack() {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }

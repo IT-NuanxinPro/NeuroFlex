@@ -571,7 +571,7 @@ onUnmounted(() => {
     color: $text-primary;
     font-weight: $font-medium;
     transition: all $transition-base;
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm;
     }
 
@@ -605,7 +605,7 @@ onUnmounted(() => {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -836,7 +836,7 @@ onUnmounted(() => {
   padding: $spacing-lg;
   margin: $spacing-xl 0;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-lg $spacing-md;
   }
 
@@ -847,7 +847,7 @@ onUnmounted(() => {
     margin-bottom: $spacing-md;
     font-size: $font-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       gap: $spacing-xs;
       margin-bottom: $spacing-sm;
       font-size: $font-sm;
@@ -863,7 +863,7 @@ onUnmounted(() => {
       white-space: nowrap;
       min-width: 100px;
 
-      @media (max-width: $breakpoint-sm) {
+      @include mobile {
         min-width: auto;
       }
     }
@@ -877,7 +877,7 @@ onUnmounted(() => {
       overflow-x: auto;
       flex: 1;
 
-      @media (max-width: $breakpoint-sm) {
+      @include mobile {
         font-size: $font-sm;
       }
     }
@@ -888,7 +888,7 @@ onUnmounted(() => {
   display: flex;
   gap: $spacing-md;
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     gap: $spacing-sm;
   }
 
@@ -901,7 +901,7 @@ onUnmounted(() => {
     font-weight: $font-medium;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-md $spacing-lg;
       font-size: $font-sm;
     }

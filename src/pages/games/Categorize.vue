@@ -387,7 +387,7 @@ function goBack() {
   padding: $spacing-2xl;
   max-width: 500px;
   width: 100%;
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding:$spacing-lg;
   }
 
@@ -420,7 +420,7 @@ function goBack() {
     color: $text-primary;
     font-weight: $font-medium;
     transition: all $transition-base;
-     @media (max-width: $breakpoint-sm) {
+     @include mobile {
       padding:$spacing-sm;
     }
 
@@ -454,7 +454,7 @@ function goBack() {
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @media (max-width: $breakpoint-sm) {
+  @include mobile {
     padding: $spacing-md;
     font-size: $font-base;
   }
@@ -532,7 +532,7 @@ function goBack() {
     min-width: 240px;
       width: 100%;
 
-      @media (max-width: $breakpoint-sm) {
+      @include mobile {
         padding: $spacing-xl;
         min-width: 0;
       }
@@ -651,7 +651,7 @@ function goBack() {
     white-space: nowrap;
     transition: all $transition-base;
 
-    @media (max-width: $breakpoint-sm) {
+    @include mobile {
       padding: $spacing-sm $spacing-md;
       font-size: $font-xs;
     }
