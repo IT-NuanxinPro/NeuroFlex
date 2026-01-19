@@ -48,19 +48,27 @@
 }
 
 // 玻璃拟态卡片
-@mixin glass-card {
+@mixin glass-card($mobile-optimized: true) {
   background: $glass-bg;
-  backdrop-filter: $glass-backdrop;
-  -webkit-backdrop-filter: $glass-backdrop;
   border: 1px solid $glass-border;
-  box-shadow: $glass-shadow;
   border-radius: $radius-lg;
 
-  // 移动端性能优化：减少阴影和模糊
-  @media (max-width: $breakpoint-sm) {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  @if $mobile-optimized {
+    // 移动端性能优化：使用CSS变量控制
+    backdrop-filter: var(--glass-blur, $glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-blur, $glass-backdrop);
+    box-shadow: var(--glass-shadow, $glass-shadow);
+
+    // 移动端：禁用模糊，减少阴影
+    @media (max-width: $breakpoint-sm) {
+      --glass-blur: none;
+      --glass-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+  } @else {
+    // 不优化版本：始终使用完整效果
+    backdrop-filter: $glass-backdrop;
+    -webkit-backdrop-filter: $glass-backdrop;
+    box-shadow: $glass-shadow;
   }
 }
 
@@ -166,7 +174,7 @@
 }
 
 // 按钮自适应网格
-@mixin button-grid($min: 100px,$gap: $spacing-md) {
+@mixin button-grid($min: 100px, $gap: $spacing-md) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax($min, 1fr));
   gap: $gap;

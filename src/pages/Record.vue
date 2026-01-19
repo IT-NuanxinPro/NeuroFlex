@@ -32,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
@@ -52,11 +52,35 @@ const moduleOptions = [
   { label: '情景', value: 'memory-story' }
 ]
 
+// 优化：使用缓存避免频繁重新计算
+const filteredHistoryCache = ref([])
+const lastFilterModule = ref('')
+const lastHistoryLength = ref(0)
+
 const filteredHistory = computed(() => {
-  if (!filterModule.value) {
-    return userStore.trainingHistory
+  // 检查是否需要重新计算
+  const currentHistoryLength = userStore.trainingHistory.length
+  const filterChanged = filterModule.value !== lastFilterModule.value
+  const historyChanged = currentHistoryLength !== lastHistoryLength.value
+
+  if (!filterChanged && !historyChanged) {
+    return filteredHistoryCache.value
   }
-  return userStore.trainingHistory.filter(r => r.moduleName === filterModule.value)
+
+  // 更新缓存标记
+  lastFilterModule.value = filterModule.value
+  lastHistoryLength.value = currentHistoryLength
+
+  // 重新计算
+  if (!filterModule.value) {
+    filteredHistoryCache.value = userStore.trainingHistory
+  } else {
+    filteredHistoryCache.value = userStore.trainingHistory.filter(
+      r => r.moduleName === filterModule.value
+    )
+  }
+
+  return filteredHistoryCache.value
 })
 
 const moduleNames = {
@@ -83,6 +107,10 @@ function formatDuration(ms) {
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
   return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`
+}
+
+function goHome() {
+  router.push('/')
 }
 </script>
 

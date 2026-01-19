@@ -53,12 +53,19 @@
 
     <!-- 训练界面 - 播放阶段 -->
     <div v-if="isTraining && phase === 'playing'" class="training-screen">
-      <div class="audio-visual">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
+      <div class="audio-visual" :class="{ disabled: isGameDisabled }">
         <div class="sound-wave">
           <div
-            class="wave-bar"
             v-for="i in 20"
             :key="i"
+            class="wave-bar"
             :style="{ animationDelay: `${i * 0.05}s` }"
           ></div>
         </div>
@@ -79,8 +86,8 @@
             type="text"
             class="digit-input"
             placeholder="例如: 1 5 3 7 2"
-            @keyup.enter="submitAnswer"
             readonly
+            @keyup.enter="submitAnswer"
           />
           <span
             class="input-counter"
@@ -105,68 +112,25 @@
 
         <div class="input-actions">
           <button class="secondary-button" @click="playAgain">重新播放</button>
-          <button class="primary-button" @click="submitAnswer" :disabled="!userInput.trim()">
+          <button class="primary-button" :disabled="!userInput.trim()" @click="submitAnswer">
             提交答案
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon" :class="accuracy >= 0.8 ? 'success' : 'partial'">
-          <svg
-            v-if="accuracy >= 0.8"
-            width="60"
-            height="60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg v-else width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        </div>
-
-        <h2>{{ accuracy >= 0.8 ? '完成！' : '继续努力' }}</h2>
-
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">正确数字</span>
-            <span class="stat-value">{{ correctDigits }} / {{ digitSequence.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">顺序正确</span>
-            <span class="stat-value">{{ correctOrder }} / {{ digitSequence.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">准确率</span>
-            <span class="stat-value">{{ Math.round(accuracy * 100) }}%</span>
-          </div>
-        </div>
-
-        <div class="answer-comparison">
-          <div class="answer-row">
-            <span class="answer-label">正确答案:</span>
-            <span class="answer-value">{{ digitSequence.join(' ') }}</span>
-          </div>
-          <div class="answer-row">
-            <span class="answer-label">你的答案:</span>
-            <span class="answer-value">{{ userDigits.join(' ') }}</span>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetTraining">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <!-- 结果弹窗 -->
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
@@ -175,7 +139,10 @@ import { ref, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { useGameCountdown } from '@/composables/useGameCountdown'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 import { backgroundOptions, digitCountOptions, snrOptions } from '@/config/audio.js'
 
 const router = useRouter()
@@ -187,7 +154,8 @@ const signalNoiseRatio = ref(snrOptions[0])
 const backgroundType = ref('white')
 const digitCount = ref('6')
 
-// 训练状态
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const phase = ref('playing') // 'playing' | 'input'
@@ -207,10 +175,41 @@ const currentInputCount = computed(() => {
     .filter(d => d !== '').length
 })
 
+// 计算游戏是否被禁用（倒计时期间）
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => (accuracy.value >= 0.8 ? 'success' : 'warning'))
+
+const resultTitle = computed(() => (accuracy.value >= 0.8 ? '完成！' : '继续努力'))
+
+const resultSubtitle = computed(() => {
+  if (accuracy.value >= 0.9) {
+    return '出色的听觉注意力！'
+  } else if (accuracy.value >= 0.7) {
+    return '继续练习！'
+  }
+  return '多加练习，你会做得更好！'
+})
+
+const resultStats = computed(() => [
+  { label: '正确数字', value: `${correctDigits.value}/${digitSequence.value.length}`, highlight: true },
+  { label: '顺序正确', value: `${correctOrder.value}/${digitSequence.value.length}`, highlight: true },
+  { label: '准确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: false },
+  { label: '难度', value: `SNR ${signalNoiseRatio.value}%`, highlight: false }
+])
+
 let audioContext = null
 let playTimer = null
 let backgroundGainNode = null
-let currentAudio = null
+
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGame
+})
 
 function generateDigitSequence() {
   const digits = []
@@ -223,20 +222,27 @@ function generateDigitSequence() {
 function initAudioContext() {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    // 确保音频上下文在用户交互后恢复
+    if (audioContext.state === 'suspended') {
+      audioContext.resume()
+    }
   }
   return audioContext
 }
 
 function playDigitSound(digit) {
+  const ctx = initAudioContext()
+
   // 临时降低背景噪音
   if (backgroundGainNode) {
     const originalGain = backgroundGainNode.gain.value
-    backgroundGainNode.gain.setValueAtTime(originalGain * 0.2, initAudioContext().currentTime)
+    backgroundGainNode.gain.setValueAtTime(originalGain * 0.2, ctx.currentTime)
     setTimeout(() => {
-      backgroundGainNode.gain.setValueAtTime(originalGain, initAudioContext().currentTime)
+      if (backgroundGainNode) {
+        backgroundGainNode.gain.setValueAtTime(originalGain, ctx.currentTime)
+      }
     }, 800)
   }
-  const ctx = initAudioContext()
 
   // 使用Web Speech API播放数字
   if ('speechSynthesis' in window) {
@@ -282,12 +288,27 @@ function playBackgroundNoise() {
 }
 
 function startTraining() {
+  // 用户交互后初始化音频上下文
+  initAudioContext()
+
+  // 立即进入训练界面并生成数字序列
   isTraining.value = true
   showResult.value = false
   phase.value = 'playing'
   digitSequence.value = generateDigitSequence()
   currentDigitIndex.value = 0
   userInput.value = ''
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGame() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
 
   trainingStore.startTraining('audio')
 
@@ -414,6 +435,7 @@ function submitAnswer() {
 function endTraining() {
   isTraining.value = false
   showResult.value = true
+  gameState.value = 'completed'
 
   trainingStore.endTraining()
 
@@ -438,10 +460,22 @@ function endTraining() {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
   if (playTimer) {
     clearInterval(playTimer)
     playTimer = null
   }
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  startTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function goBack() {
@@ -456,6 +490,8 @@ function goBack() {
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel()
   }
+  // 清理倒计时
+  countdown.cleanup()
   router.back()
 }
 
@@ -471,6 +507,8 @@ onUnmounted(() => {
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel()
   }
+  // 清理倒计时
+  countdown.cleanup()
 })
 </script>
 
@@ -559,7 +597,7 @@ onUnmounted(() => {
 }
 
 .button-group {
- @include button-grid(80px);
+  @include button-grid(80px);
 
   .snr-button {
     @include button-reset;
@@ -624,25 +662,37 @@ onUnmounted(() => {
 
 .training-screen {
   flex: 1;
-  @include flex-center;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+  gap: $spacing-md;
 }
 
 .audio-visual {
   text-align: center;
+  transition: opacity 0.3s ease;
+  flex-shrink: 0;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   .sound-wave {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: $spacing-xs;
-    height: 150px;
-    margin-bottom: $spacing-xl;
+    height: clamp(80px, 15vh, 120px);
+    margin-bottom: $spacing-lg;
 
     .wave-bar {
-      width: 8px;
+      width: 6px;
       background: linear-gradient(180deg, $accent-primary, $accent-secondary);
       border-radius: $radius-full;
       animation: wave 1s ease-in-out infinite;
@@ -650,12 +700,12 @@ onUnmounted(() => {
   }
 
   .audio-hint {
-    font-size: $font-xl;
-    margin-bottom: $spacing-md;
+    font-size: clamp($font-base, 3vw, $font-xl);
+    margin-bottom: $spacing-sm;
   }
 
   .progress-text {
-    font-size: $font-2xl;
+    font-size: clamp($font-xl, 4vw, $font-2xl);
     font-weight: $font-bold;
     color: $accent-primary;
   }
@@ -673,6 +723,7 @@ onUnmounted(() => {
 
 .input-section {
   @include glass-card;
+  flex-shrink: 0;
   padding: $spacing-2xl;
   max-width: 600px;
   width: 100%;

@@ -7,11 +7,41 @@
         </svg>
       </button>
       <h1 class="page-title">双侧肢体镜像协调</h1>
-      <button v-if="isDrawing" class="clear-button" @click="clearCanvas">清除</button>
+      <button v-if="isDrawing && !countdown.isCountingDown.value" class="clear-button" @click="clearCanvas">清除</button>
     </header>
 
+    <!-- PC端提示弹窗 -->
+    <Modal 
+      :visible="showPCWarning" 
+      :show-close="false" 
+      :show-footer="false" 
+      :close-on-click-overlay="false"
+      @close="handlePCWarningClose"
+    >
+      <div class="pc-warning-content">
+        <div class="warning-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <h2>功能提示</h2>
+        <p class="warning-text">
+          镜像协调训练需要双手同时操作，<br />
+          建议使用<strong>移动设备</strong>或<strong>平板电脑</strong>进行训练。
+        </p>
+        <p class="warning-subtext">
+          PC端无法实现双手独立绘制的最佳体验
+        </p>
+        <div class="warning-actions">
+          <button class="primary-button" @click="goBack">返回首页</button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- 配置界面 -->
-    <div v-if="!isDrawing && !showResult" class="config-screen">
+    <div v-if="!isDrawing && !showResult && !isPC" class="config-screen">
       <div class="config-card">
         <h2>选择难度</h2>
 
@@ -41,28 +71,36 @@
     </div>
 
     <!-- 绘图界面 -->
-    <div v-if="isDrawing" class="drawing-screen">
-      <div class="instruction-banner">
+    <div v-if="isDrawing && !isPC" class="drawing-screen">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
+      <div v-if="!countdown.isCountingDown.value" class="instruction-banner">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
-        <span>在左侧画板绘制，右侧会自动镜像显示</span>
+        <span>左右两侧画板独立操作，双手同时绘制</span>
       </div>
 
-      <div class="canvas-container">
+      <div v-if="!countdown.isCountingDown.value" class="canvas-container" :class="{ disabled: isGameDisabled }">
         <div class="canvas-panel left-panel">
-          <h3>✍️ 左侧画板（可绘制）</h3>
+          <h3>✍️ 左手画板</h3>
           <canvas
             ref="leftCanvas"
             @mousedown="startDraw('left', $event)"
             @mousemove="draw('left', $event)"
-            @mouseup="endDraw"
-            @mouseleave="endDraw"
+            @mouseup="endDraw('left')"
+            @mouseleave="endDraw('left')"
             @touchstart="startDraw('left', $event)"
             @touchmove="draw('left', $event)"
-            @touchend="endDraw"
+            @touchend="endDraw('left')"
+            @touchcancel="endDraw('left')"
           ></canvas>
         </div>
 
@@ -74,98 +112,74 @@
         </div>
 
         <div class="canvas-panel right-panel">
-          <h3>🪞 右侧镜像（自动）</h3>
+          <h3>✍️ 右手画板</h3>
           <canvas
             ref="rightCanvas"
             @mousedown="startDraw('right', $event)"
             @mousemove="draw('right', $event)"
-            @mouseup="endDraw"
-            @mouseleave="endDraw"
+            @mouseup="endDraw('right')"
+            @mouseleave="endDraw('right')"
             @touchstart="startDraw('right', $event)"
             @touchmove="draw('right', $event)"
-            @touchend="endDraw"
+            @touchend="endDraw('right')"
+            @touchcancel="endDraw('right')"
           >
           </canvas>
-          <div class="mirror-overlay">镜像区域</div>
         </div>
       </div>
 
-      <div class="drawing-controls">
+      <div v-if="!countdown.isCountingDown.value" class="drawing-controls">
         <button class="control-button" @click="clearCanvas">清除画布</button>
         <button class="control-button primary" @click="finishDrawing">完成训练</button>
       </div>
 
-      <div class="drawing-hint">
-        <p v-if="templateType !== 'free'">💡 提示：尝试绘制{{ templateHint }}</p>
-        <p v-else>💡 自由绘制，观察镜像效果</p>
+      <div v-if="!countdown.isCountingDown.value" class="drawing-hint">
+        <p v-if="templateType !== 'free'">💡 提示：左手绘制{{ templateHint.left }}，右手绘制{{ templateHint.right }}</p>
+        <p v-else>💡 自由绘制，锻炼双手协调能力</p>
       </div>
     </div>
 
     <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon success">
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
-
-        <h2>训练完成！</h2>
-
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">绘制时长</span>
-            <span class="stat-value">{{ formatTime(drawingDuration) }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">笔画数</span>
-            <span class="stat-value">{{ strokeCount }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">训练模式</span>
-            <span class="stat-value">{{ getModeText(selectedMode) }}</span>
-          </div>
-        </div>
-
-        <div class="result-preview">
-          <h3>你的作品</h3>
-          <div class="preview-canvases">
-            <div class="preview-item">
-              <p>左侧</p>
-              <canvas ref="previewLeft"></canvas>
-            </div>
-            <div class="preview-item">
-              <p>右侧镜像</p>
-              <canvas ref="previewRight"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetDrawing">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { useGameCountdown } from '@/composables/useGameCountdown'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
+import Modal from '@/components/Modal.vue'
 import { modes, templateOptions } from '@/config/mirror.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
+// PC端检测
+const showPCWarning = ref(false)
+const isPC = ref(false)
+
 // 配置
 const selectedMode = ref('different')
 const templateType = ref('free')
 
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 
 // 绘图状态
 const isDrawing = ref(false)
@@ -177,39 +191,104 @@ const previewRight = ref(null)
 const drawingDuration = ref(0)
 const strokeCount = ref(0)
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startDrawingAfterCountdown
+})
+
 // 保存画布图像数据
 const leftCanvasImage = ref(null)
 const rightCanvasImage = ref(null)
 
 let leftCtx = null
 let rightCtx = null
-let drawing = false
 let startTime = 0
 let leftPaths = []
 let rightPaths = []
 
-const templateHint = ref('')
+// 跟踪每个画板的绘制状态
+let drawingLeft = false
+let drawingRight = false
+
+const templateHint = ref({ left: '', right: '' })
 
 const templateHints = {
-  circle: '一个圆形',
-  square: '一个方形',
-  wave: '波浪线'
+  circle: { left: '圆形', right: '圆形' },
+  square: { left: '方形', right: '方形' },
+  wave: { left: '波浪线', right: '波浪线' },
+  different: { left: '圆形', right: '方形' }
+}
+
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => 'success')
+
+const resultTitle = computed(() => '训练完成！')
+
+const resultSubtitle = computed(() => '继续保持，提升双侧协调能力')
+
+const resultStats = computed(() => [
+  { label: '绘制时长', value: formatTime(drawingDuration.value), highlight: true },
+  { label: '笔画数', value: `${strokeCount.value}`, highlight: false },
+  { label: '训练模式', value: getModeText(selectedMode.value), highlight: false }
+])
+
+// 检测是否为PC端
+function detectPC() {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  
+  // 如果不是移动设备，且屏幕宽度大于1024px，认为是PC
+  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
+  
+  return isPC.value
+}
+
+function handlePCWarningClose() {
+  showPCWarning.value = false
 }
 
 function startDrawing() {
+  // 立即进入绘图界面
   isDrawing.value = true
   showResult.value = false
-  startTime = Date.now()
   strokeCount.value = 0
   leftPaths = []
   rightPaths = []
-  templateHint.value = templateHints[templateType.value] || ''
+  
+  // 根据模式设置提示
+  if (selectedMode.value === 'different') {
+    templateHint.value = templateHints.different
+  } else {
+    templateHint.value = templateHints[templateType.value] || { left: '', right: '' }
+  }
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 先启动倒计时，再初始化画布
+  countdown.start()
+  
+  // 延迟初始化画布，确保倒计时先显示
+  setTimeout(() => {
+    nextTick(() => {
+      initCanvas()
+    })
+  }, 100)
+}
+
+function startDrawingAfterCountdown() {
+  // 倒计时结束后，开始实际绘图
+  gameState.value = 'active'
+  startTime = Date.now()
 
   trainingStore.startTraining('mirror')
-
-  nextTick(() => {
-    initCanvas()
-  })
 }
 
 function initCanvas() {
@@ -225,7 +304,6 @@ function initCanvas() {
 
   leftCtx = leftCanvas.value.getContext('2d')
   rightCtx = rightCanvas.value.getContext('2d')
-
   ;[leftCtx, rightCtx].forEach(ctx => {
     ctx.strokeStyle = '#00d4ff'
     ctx.lineWidth = 3
@@ -277,8 +355,16 @@ function getCanvasCoords(canvas, event) {
 }
 
 function startDraw(side, event) {
-  event.preventDefault()
-  drawing = true
+  // 阻止默认行为和事件冒泡
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
+  
+  if (side === 'left') {
+    drawingLeft = true
+  } else {
+    drawingRight = true
+  }
+  
   strokeCount.value++
 
   const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
@@ -293,8 +379,12 @@ function startDraw(side, event) {
 }
 
 function draw(side, event) {
-  if (!drawing) return
-  event.preventDefault()
+  const isDrawing = side === 'left' ? drawingLeft : drawingRight
+  if (!isDrawing) return
+  
+  // 阻止默认行为和事件冒泡
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
 
   const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
   const ctx = side === 'left' ? leftCtx : rightCtx
@@ -308,8 +398,16 @@ function draw(side, event) {
   pathArray.push({ x: coords.x, y: coords.y, t: Date.now() })
 }
 
-function endDraw() {
-  drawing = false
+function endDraw(side) {
+  if (side === 'left') {
+    drawingLeft = false
+  } else if (side === 'right') {
+    drawingRight = false
+  } else {
+    // 如果没有指定 side，清除所有
+    drawingLeft = false
+    drawingRight = false
+  }
 }
 
 function clearCanvas() {
@@ -395,15 +493,23 @@ function saveTrainingRecord() {
   })
 }
 
-function endTraining() {
-  // 这个函数现在不需要了，逻辑已经合并到 finishDrawing
-}
-
 function resetDrawing() {
   showResult.value = false
   isDrawing.value = false
+  gameState.value = 'idle'
   leftCanvasImage.value = null
   rightCanvasImage.value = null
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetDrawing()
+  startDrawing()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function getModeText(mode) {
@@ -421,6 +527,18 @@ function formatTime(ms) {
 function goBack() {
   router.back()
 }
+
+// 页面加载时检测PC端
+onMounted(() => {
+  if (detectPC()) {
+    showPCWarning.value = true
+  }
+})
+
+onUnmounted(() => {
+  // 清理倒计时
+  countdown.cleanup()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -493,12 +611,17 @@ function goBack() {
 .result-card {
   @include glass-card;
   padding: $spacing-2xl;
-  max-width: 700px;
+  max-width: 500px;
   width: 100%;
+
+  @include mobile {
+    padding: $spacing-lg;
+  }
 
   h2 {
     text-align: center;
     margin-bottom: $spacing-xl;
+    font-size: $font-xl;
   }
 }
 
@@ -509,11 +632,14 @@ function goBack() {
     display: block;
     font-weight: $font-medium;
     margin-bottom: $spacing-md;
+    font-size: $font-base;
   }
 }
 
 .mode-grid {
-  @include button-grid;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
 
   @include mobile {
     grid-template-columns: 1fr;
@@ -525,16 +651,23 @@ function goBack() {
     @include glass-card;
     padding: $spacing-lg;
     text-align: center;
-    border: 2px solid transparent;
+    border: 2px solid rgba(255, 255, 255, 0.1);
     transition: all $transition-base;
 
     &.active {
       border-color: $accent-primary;
       background: rgba(0, 212, 255, 0.1);
+      box-shadow:
+        0 0 20px rgba(0, 212, 255, 0.3),
+        inset 0 0 20px rgba(0, 212, 255, 0.1);
     }
 
-    &:hover:not(.active) {
-      background: rgba(255, 255, 255, 0.1);
+    // 只在桌面端启用 hover
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(0, 212, 255, 0.3);
+      }
     }
 
     .mode-icon {
@@ -575,11 +708,14 @@ function goBack() {
     font-size: $font-base;
   }
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 12px 32px rgba(0, 212, 255, 0.5),
-      0 0 60px rgba(0, 212, 255, 0.3);
+  // 只在桌面端启用 hover
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 32px rgba(0, 212, 255, 0.5),
+        0 0 60px rgba(0, 212, 255, 0.3);
+    }
   }
 
   &:active {
@@ -591,89 +727,84 @@ function goBack() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  gap: $spacing-lg;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  gap: $spacing-sm;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
 }
 
 .instruction-banner {
   @include glass-card;
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-sm $spacing-md;
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
   background: rgba(0, 212, 255, 0.1);
   border: 1px solid rgba(0, 212, 255, 0.3);
   color: $accent-primary;
-  font-size: $font-sm;
+  font-size: clamp(10px, 2vw, $font-xs);
   font-weight: $font-medium;
   text-align: center;
   justify-content: center;
+  flex-shrink: 0;
 
   svg {
     flex-shrink: 0;
-  }
-
-  @include mobile {
-    font-size: $font-xs;
-    padding: $spacing-sm $spacing-md;
+    width: 16px;
+    height: 16px;
   }
 }
 
 .canvas-container {
   flex: 1;
   display: flex;
-  gap: $spacing-md;
-  min-height: 400px;
+  gap: $spacing-xs;
+  min-height: 0;
+  position: relative;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   @include mobile {
     flex-direction: column;
+    gap: $spacing-xs;
   }
 
   .canvas-panel {
     flex: 1;
     @include glass-card;
-    padding: $spacing-md;
+    padding: $spacing-xs;
     display: flex;
     flex-direction: column;
     position: relative;
+    min-height: 0;
 
     h3 {
-      font-size: $font-base;
-      margin-bottom: $spacing-sm;
+      font-size: clamp(10px, 2vw, $font-sm);
+      margin-bottom: $spacing-xs;
       text-align: center;
+      flex-shrink: 0;
     }
 
     canvas {
       flex: 1;
-      border-radius: $radius-md;
+      border-radius: $radius-sm;
       background: rgba(0, 0, 0, 0.3);
       touch-action: none;
+      min-height: 0;
+      width: 100%;
     }
 
     &.left-panel canvas {
       cursor: crosshair;
     }
 
-    &.right-panel {
-      canvas {
-        cursor: not-allowed;
-        opacity: 0.9;
-      }
-
-      .mirror-overlay {
-        position: absolute;
-        bottom: $spacing-md;
-        right: $spacing-md;
-        padding: $spacing-xs $spacing-sm;
-        background: rgba(255, 51, 102, 0.2);
-        border: 1px solid rgba(255, 51, 102, 0.5);
-        border-radius: $radius-sm;
-        font-size: $font-xs;
-        color: $accent-error;
-        pointer-events: none;
-      }
+    &.right-panel canvas {
+      cursor: crosshair;
     }
   }
 
@@ -684,6 +815,12 @@ function goBack() {
     align-items: center;
     justify-content: center;
     color: $accent-primary;
+    flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
 
     @include mobile {
       width: 100%;
@@ -695,22 +832,37 @@ function goBack() {
 
 .drawing-controls {
   display: flex;
-  gap: $spacing-md;
+  gap: $spacing-sm;
   justify-content: center;
+  flex-shrink: 0;
 
   .control-button {
     @include button-reset;
     @include click-feedback;
-    padding: $spacing-md $spacing-xl;
+    padding: clamp($spacing-sm, 2vh, $spacing-md) clamp($spacing-md, 4vw, $spacing-lg);
     border-radius: $radius-md;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: $text-primary;
     font-weight: $font-medium;
+    font-size: clamp($font-sm, 2.5vw, $font-base);
 
     &.primary {
       background: linear-gradient(135deg, $accent-primary, $accent-secondary);
       border: none;
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+    }
+
+    // 只在桌面端启用 hover
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      &.primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4);
+      }
     }
   }
 }
@@ -718,121 +870,84 @@ function goBack() {
 .drawing-hint {
   text-align: center;
   color: $text-secondary;
-  font-size: $font-base;
+  font-size: clamp(10px, 2vw, $font-xs);
+  flex-shrink: 0;
+  line-height: 1.4;
 }
 
-.result-icon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto $spacing-lg;
-  border-radius: $radius-full;
-  @include flex-center;
+// PC端警告弹窗样式
+.pc-warning-content {
+  text-align: center;
+  padding: $spacing-xl;
 
-  &.success {
-    background: rgba(0, 255, 136, 0.2);
-    color: $accent-success;
-  }
-}
+  .warning-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto $spacing-lg;
+    border-radius: $radius-full;
+    background: rgba(255, 170, 0, 0.1);
+    border: 2px solid rgba(255, 170, 0, 0.3);
+    @include flex-center;
 
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-md;
-  margin: $spacing-xl 0;
-
-  .stat {
-    text-align: center;
-
-    .stat-label {
-      display: block;
-      font-size: $font-sm;
-      color: $text-secondary;
-      margin-bottom: $spacing-xs;
-    }
-
-    .stat-value {
-      display: block;
-      font-size: $font-lg;
-      font-weight: $font-bold;
-      color: $accent-primary;
+    svg {
+      color: $accent-warning;
+      stroke-width: 2;
     }
   }
-}
 
-.result-preview {
-  margin: $spacing-xl 0;
-
-  h3 {
-    text-align: center;
+  h2 {
+    font-size: $font-2xl;
+    font-weight: $font-bold;
     margin-bottom: $spacing-lg;
+    color: $text-primary;
   }
 
-  .preview-canvases {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: $spacing-lg;
+  .warning-text {
+    font-size: $font-base;
+    line-height: 1.8;
+    color: $text-secondary;
+    margin-bottom: $spacing-md;
 
-    @include mobile {
-      grid-template-columns: 1fr;
-    }
-
-    .preview-item {
-      text-align: center;
-
-      p {
-        font-size: $font-sm;
-        color: $text-secondary;
-        margin-bottom: $spacing-sm;
-      }
-
-      canvas {
-        width: 100%;
-        height: auto;
-        border-radius: $radius-md;
-        background: rgba(0, 0, 0, 0.3);
-      }
+    strong {
+      color: $accent-primary;
+      font-weight: $font-semibold;
     }
   }
-}
 
-.result-actions {
-  display: flex;
-  gap: $spacing-sm;
-
-  button {
-    @include button-reset;
-    @include click-feedback;
-    flex: 1;
-    padding: $spacing-md $spacing-lg;
-    border-radius: $radius-md;
-    font-weight: $font-medium;
+  .warning-subtext {
     font-size: $font-sm;
-    white-space: nowrap;
-    transition: all $transition-base;
-
-    @include mobile {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-    }
+    color: $text-tertiary;
+    margin-bottom: $spacing-2xl;
   }
 
-  .secondary-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: $text-primary;
+  .warning-actions {
+    display: flex;
+    gap: $spacing-md;
+    justify-content: center;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
+    button {
+      @include button-reset;
+      @include click-feedback;
+      padding: $spacing-md $spacing-xl;
+      border-radius: $radius-md;
+      font-weight: $font-medium;
+      font-size: $font-base;
+      transition: all $transition-base;
+      min-width: 120px;
     }
-  }
 
-  .primary-button {
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    color: $text-primary;
+    .primary-button {
+      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+      color: $text-primary;
+      width: 100%;
+      max-width: 200px;
 
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+        }
+      }
     }
   }
 }

@@ -7,7 +7,7 @@
         </svg>
       </button>
       <h1 class="page-title">Stroop 训练</h1>
-      <div class="score" v-if="isTraining">{{ correctCount }}/{{ totalTrials }}</div>
+      <div v-if="isTraining" class="score">{{ correctCount }}/{{ totalTrials }}</div>
     </header>
 
     <main class="page-content">
@@ -31,7 +31,7 @@
             </button>
           </div>
 
-          <h2 style="margin-top: 32px">选择模式</h2>
+          <h2 style="margin-top: 24px">选择模式</h2>
           <div class="difficulty-buttons">
             <button
               :class="['difficulty-btn', { active: timeMode === 'standard' }]"
@@ -49,20 +49,31 @@
             </button>
           </div>
 
-          <button class="start-button" @click="startTraining">开始训练</button>
+          <button class="start-button" @click="handleStartTraining">开始训练</button>
         </div>
       </div>
 
       <div v-else-if="isTraining" class="training-screen">
-        <div class="timer-bar" v-if="timeMode === 'timed'">
+        <!-- 倒计时遮罩层 -->
+        <GameCountdown
+          :current-count="countdown.currentCount.value"
+          :progress="countdown.progress.value"
+          :is-visible="countdown.isCountingDown.value"
+        />
+
+        <div v-if="timeMode === 'timed'" class="timer-bar">
           <div class="timer-fill" :style="{ width: `${timeRemaining}%` }"></div>
         </div>
 
-        <div class="word-display" :style="{ color: currentColor }">
+        <div
+          class="word-display"
+          :style="{ color: currentColor }"
+          :class="{ disabled: isGameDisabled }"
+        >
           {{ currentWord }}
         </div>
 
-        <div class="color-buttons">
+        <div class="color-buttons" :class="{ disabled: isGameDisabled }">
           <button
             v-for="color in colors"
             :key="color.name"
@@ -79,47 +90,18 @@
         </div>
       </div>
 
-      <div v-else-if="showResult" class="result-screen">
-        <div class="result-card">
-          <h2>训练完成</h2>
-
-          <div class="result-stats">
-            <div class="stat-item">
-              <span class="stat-label">正确率</span>
-              <span class="stat-value">{{ (accuracy * 100).toFixed(0) }}%</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">正确数</span>
-              <span class="stat-value">{{ correctCount }}/{{ totalTrials }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">错误数</span>
-              <span class="stat-value">{{ wrongCount }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">平均反应</span>
-              <span class="stat-value">{{ avgReactionTime }}ms</span>
-            </div>
-            <div class="stat-item" v-if="timeMode === 'standard'">
-              <span class="stat-label">最快反应</span>
-              <span class="stat-value">{{ fastestTime }}ms</span>
-            </div>
-            <div class="stat-item" v-if="timeMode === 'standard'">
-              <span class="stat-label">最慢反应</span>
-              <span class="stat-value">{{ slowestTime }}ms</span>
-            </div>
-            <div class="stat-item" v-if="timeMode === 'timed'">
-              <span class="stat-label">超时次数</span>
-              <span class="stat-value">{{ timeoutCount }}</span>
-            </div>
-          </div>
-
-          <div class="result-actions">
-            <button class="action-button secondary" @click="resetTraining">再来一次</button>
-            <button class="action-button primary" @click="goBack">返回</button>
-          </div>
-        </div>
-      </div>
+      <!-- 结果弹窗 -->
+      <GameResult
+        :visible="showResult"
+        :type="resultType"
+        :title="resultTitle"
+        :subtitle="resultSubtitle"
+        :stats="resultStats"
+        :show-retry="true"
+        close-text="返回首页"
+        @retry="handleRetry"
+        @close="handleClose"
+      />
     </main>
   </div>
 </template>
@@ -129,6 +111,9 @@ import { ref, computed, onUnmounted } from 'vue'
 import { colors, defaultTrials, timeLimitSeconds } from '@/config/stroop.js'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useGameCountdown } from '@/composables/useGameCountdown'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -136,6 +121,7 @@ const userStore = useUserStore()
 const difficulty = ref('basic')
 const timeMode = ref('standard') // 'standard' 或 'timed'
 // 颜色数组已移至配置 timeLimitSeconds // 限时模式每个字的时间限制
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const currentWord = ref('')
@@ -155,6 +141,12 @@ let timerInterval = null
 let timeoutTimer = null
 const progress = computed(() => (currentTrial.value / totalTrials.value) * 100)
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGame
+})
+
 // 结果统计
 const accuracy = computed(() => correctCount.value / totalTrials.value)
 const avgReactionTime = computed(() => {
@@ -171,7 +163,51 @@ const slowestTime = computed(() => {
   return Math.max(...reactionTimes.value)
 })
 
-function startTraining() {
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => 'success')
+
+const resultTitle = computed(() => '训练完成')
+
+const resultSubtitle = computed(() => {
+  if (accuracy.value >= 0.9) {
+    return '出色的表现！'
+  } else if (accuracy.value >= 0.7) {
+    return '继续努力！'
+  }
+  return '多加练习，你会做得更好！'
+})
+
+const resultStats = computed(() => {
+  const totalTime = reactionTimes.value.reduce((a, b) => a + b, 0)
+  
+  const stats = [
+    { label: '总用时', value: `${(totalTime / 1000).toFixed(1)}秒`, highlight: true },
+    { label: '正确率', value: `${(accuracy.value * 100).toFixed(0)}%`, highlight: true },
+    { label: '正确数', value: `${correctCount.value}/${totalTrials.value}`, highlight: false },
+    { label: '错误数', value: `${wrongCount.value}`, highlight: false },
+    { label: '平均反应', value: `${avgReactionTime.value}ms`, highlight: false }
+  ]
+
+  if (timeMode.value === 'standard') {
+    stats.push(
+      { label: '最快反应', value: `${fastestTime.value}ms`, highlight: false },
+      { label: '最慢反应', value: `${slowestTime.value}ms`, highlight: false }
+    )
+  } else {
+    stats.push(
+      { label: '超时次数', value: `${timeoutCount.value}`, highlight: false }
+    )
+  }
+
+  return stats
+})
+
+function handleStartTraining() {
+  // 立即进入训练界面
   isTraining.value = true
   showResult.value = false
   correctCount.value = 0
@@ -179,6 +215,17 @@ function startTraining() {
   currentTrial.value = 0
   reactionTimes.value = []
   timeoutCount.value = 0
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGame() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
   nextTrial()
 }
 
@@ -265,6 +312,7 @@ function selectColor(colorName) {
 function endTraining() {
   isTraining.value = false
   showResult.value = true
+  gameState.value = 'completed'
   clearTimers()
 
   userStore.addTrainingRecord({
@@ -289,16 +337,30 @@ function endTraining() {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  handleStartTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function goBack() {
   clearTimers()
+  countdown.cancel()
   router.back()
 }
 
 // 组件卸载时清理计时器
 onUnmounted(() => {
   clearTimers()
+  countdown.cancel()
 })
 </script>
 
@@ -360,21 +422,36 @@ onUnmounted(() => {
 
 .config-screen {
   flex: 1;
-  @include flex-center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: calc($spacing-md + 60px) $spacing-lg $spacing-md;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .config-card {
   @include glass-card;
-  padding: $spacing-2xl;
+  padding: $spacing-xl;
   max-width: 500px;
   width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  @include custom-scrollbar;
+
+  @include mobile {
+    padding: $spacing-lg;
+  }
 
   h2 {
     text-align: center;
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg;
+    font-size: $font-xl;
+    
+    @include mobile {
+      font-size: $font-lg;
+      margin-bottom: $spacing-md;
+    }
   }
 }
 
@@ -382,7 +459,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg;
+
+  @include mobile {
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
 
   .difficulty-btn {
     @include button-reset;
@@ -393,12 +475,23 @@ onUnmounted(() => {
     text-align: left;
     transition: all $transition-base;
     position: relative;
+    font-size: $font-base;
+
+    @include mobile {
+      padding: $spacing-md;
+      font-size: $font-sm;
+    }
 
     span {
       display: block;
       font-size: $font-sm;
       color: $text-secondary;
       margin-top: $spacing-xs;
+
+      @include mobile {
+        font-size: $font-xs;
+        margin-top: 4px;
+      }
     }
 
     &:hover:not(.active) {
@@ -451,20 +544,22 @@ onUnmounted(() => {
   width: 100%;
   max-width: 600px;
   text-align: center;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  overflow: hidden;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  position: relative;
+  min-height: 0;
+  gap: $spacing-sm;
 }
 
 .timer-bar {
-  height: 8px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: $radius-full;
   overflow: hidden;
-  margin-bottom: $spacing-xl;
+  flex-shrink: 0;
 
   .timer-fill {
     height: 100%;
@@ -474,154 +569,71 @@ onUnmounted(() => {
 }
 
 .word-display {
-  font-size: clamp(3rem, 10vw, 6rem);
+  font-size: clamp(2.5rem, 8vw, 5rem);
   font-weight: $font-bold;
-  margin-bottom: $spacing-2xl;
-  min-height: 150px;
+  flex: 1;
   @include flex-center;
-  flex: 0 0 auto;
+  min-height: 0;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
+
+  &.disabled {
+    opacity: 0.3;
+    filter: blur(8px);
+    pointer-events: none;
+  }
 }
 
 .color-buttons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: $spacing-md;
-  margin-bottom: $spacing-xl;
-  flex: 0 0 auto;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
+  margin-bottom: $spacing-md;
 
   @include mobile {
     grid-template-columns: repeat(2, 1fr);
-    gap: $spacing-sm;
+    gap: $spacing-xs;
+  }
+
+  &.disabled {
+    opacity: 0.3;
+    filter: blur(8px);
+    pointer-events: none;
   }
 
   .color-button {
     @include button-reset;
     @include click-feedback;
-    padding: $spacing-xl;
+    padding: clamp($spacing-lg, 4vh, $spacing-2xl);
     border-radius: $radius-md;
-    font-size: $font-xl;
+    font-size: clamp($font-lg, 3vw, $font-2xl);
     font-weight: $font-bold;
     color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-
+    min-height: 60px;
+    
     @include mobile {
-      padding: $spacing-lg;
-      font-size: $font-lg;
+      min-height: 70px;
     }
   }
 }
 
 .progress {
-  height: 8px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: $radius-full;
   overflow: hidden;
-  flex: 0 0 auto;
+  flex-shrink: 0;
 
   .progress-bar {
     height: 100%;
     background: linear-gradient(90deg, $accent-primary, $accent-secondary);
     transition: width $transition-base;
-  }
-}
-
-.result-screen {
-  flex: 1;
-  @include flex-center;
-  padding: calc($spacing-md + 60px) $spacing-lg $spacing-md;
-  overflow-y: auto;
-  @include custom-scrollbar;
-}
-
-.result-card {
-  @include glass-card;
-  padding: $spacing-2xl;
-  max-width: 600px;
-  width: 100%;
-
-  h2 {
-    text-align: center;
-    font-size: $font-2xl;
-    margin-bottom: $spacing-xl;
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-}
-
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-lg;
-  margin-bottom: $spacing-2xl;
-
-  @include mobile {
-    grid-template-columns: 1fr;
-    gap: $spacing-md;
-  }
-
-  .stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $spacing-lg;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: $radius-md;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-
-    .stat-label {
-      font-size: $font-base;
-      color: $text-secondary;
-    }
-
-    .stat-value {
-      font-size: $font-xl;
-      font-weight: $font-bold;
-      color: $accent-primary;
-    }
-  }
-}
-
-.result-actions {
-  display: flex;
-  gap: $spacing-sm;
-
-  .action-button {
-    @include button-reset;
-    flex: 1;
-    padding: $spacing-md $spacing-lg;
-    border-radius: $radius-md;
-    font-weight: $font-medium;
-    font-size: $font-sm;
-    white-space: nowrap;
-    transition: all $transition-base;
-
-    @include mobile {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-    }
-
-    &.primary {
-      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-      color: $text-primary;
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-      }
-    }
-
-    &.secondary {
-      background: rgba(255, 255, 255, 0.05);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      color: $text-primary;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: $accent-primary;
-      }
-    }
   }
 }
 </style>

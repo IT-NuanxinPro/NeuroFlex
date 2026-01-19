@@ -33,21 +33,28 @@
           <ButtonGroupSelect v-model="displaySpeed" :options="speedOptions" />
         </div>
 
-        <button class="start-button" @click="startTraining">开始训练</button>
+        <button class="start-button" @click="handleStartTraining">开始训练</button>
       </div>
     </div>
 
     <!-- 训练界面 - 展示阶段 -->
     <div v-if="isTraining && phase === 'display'" class="training-screen">
-      <div class="progress-bar">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
+      <div class="progress-bar" :class="{ disabled: isGameDisabled }">
         <div
           class="progress-fill"
           :style="{ width: `${(currentIndex / sequence.length) * 100}%` }"
         ></div>
       </div>
 
-      <div class="item-display">
-        <div class="item-card" v-if="currentItem">
+      <div class="item-display" :class="{ disabled: isGameDisabled }">
+        <div v-if="currentItem" class="item-card">
           <div class="item-icon">{{ currentItem.icon }}</div>
           <div class="item-name">{{ currentItem.name }}</div>
           <div class="item-category">{{ currentItem.category }}</div>
@@ -58,12 +65,19 @@
 
     <!-- 训练界面 - 回忆阶段 -->
     <div v-if="isTraining && phase === 'recall'" class="training-screen">
-      <div class="recall-info">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
+      <div class="recall-info" :class="{ disabled: isGameDisabled }">
         <p>请按顺序选择刚才看到的物品</p>
         <p class="recall-progress">{{ userRecall.length }} / {{ sequence.length }}</p>
       </div>
 
-      <div class="item-grid">
+      <div class="item-grid" :class="{ disabled: isGameDisabled }">
         <button
           v-for="item in recallOptions"
           :key="item.name"
@@ -73,15 +87,19 @@
               disabled: isSubmitted || userRecall.some(r => r.name === item.name)
             }
           ]"
-          @click="selectItem(item)"
           :disabled="isSubmitted || userRecall.some(r => r.name === item.name)"
+          @click="selectItem(item)"
         >
           <div class="item-icon">{{ item.icon }}</div>
           <div class="item-name">{{ item.name }}</div>
         </button>
       </div>
 
-      <div class="selected-sequence" v-if="userRecall.length > 0">
+      <div
+        v-if="userRecall.length > 0"
+        class="selected-sequence"
+        :class="{ disabled: isGameDisabled }"
+      >
         <h3>已选择的顺序：</h3>
         <div class="selected-items">
           <span v-for="(item, idx) in userRecall" :key="idx" class="selected-item">
@@ -90,109 +108,48 @@
         </div>
       </div>
 
-      <div class="recall-actions">
+      <div class="recall-actions" :class="{ disabled: isGameDisabled }">
         <button
           class="secondary-button"
-          @click="undoSelection"
           :disabled="userRecall.length === 0 || isSubmitted"
+          @click="undoSelection"
         >
           撤销
         </button>
         <button
           class="primary-button"
-          @click="submitRecall"
           :disabled="userRecall.length !== sequence.length || isSubmitted"
+          @click="submitRecall"
         >
           提交答案
         </button>
       </div>
     </div>
 
-    <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon" :class="accuracy >= 0.8 ? 'success' : 'partial'">
-          <svg
-            v-if="accuracy >= 0.8"
-            width="60"
-            height="60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg v-else width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        </div>
-
-        <h2>{{ accuracy >= 0.8 ? '完成！' : '继续努力' }}</h2>
-
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">物品正确</span>
-            <span class="stat-value">{{ correctItems }} / {{ sequence.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">顺序正确</span>
-            <span class="stat-value">{{ correctOrder }} / {{ sequence.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">准确率</span>
-            <span class="stat-value">{{ Math.round(accuracy * 100) }}%</span>
-          </div>
-        </div>
-
-        <div class="answer-comparison">
-          <h3>答案对比</h3>
-          <div class="comparison-grid">
-            <div class="comparison-column">
-              <h4>正确答案</h4>
-              <div class="answer-list">
-                <div v-for="(item, idx) in sequence" :key="idx" class="answer-item">
-                  {{ idx + 1 }}. {{ item.icon }} {{ item.name }}
-                </div>
-              </div>
-            </div>
-            <div class="comparison-column">
-              <h4>你的答案</h4>
-              <div class="answer-list">
-                <div
-                  v-for="(item, idx) in userRecall"
-                  :key="idx"
-                  :class="[
-                    'answer-item',
-                    {
-                      correct: item.name === sequence[idx]?.name,
-                      wrong: item.name !== sequence[idx]?.name
-                    }
-                  ]"
-                >
-                  {{ idx + 1 }}. {{ item.icon }} {{ item.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetTraining">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <!-- 结果弹窗 -->
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { useGameCountdown } from '@/composables/useGameCountdown'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 import { itemPool, itemCountOptions, speedOptions } from '@/config/sequence.js'
 
 const router = useRouter()
@@ -202,6 +159,8 @@ const trainingStore = useTrainingStore()
 const itemCount = ref(parseInt(itemCountOptions[1].value)) // 默认9个
 const displaySpeed = ref('normal')
 
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const phase = ref('display')
@@ -217,6 +176,37 @@ const accuracy = ref(0)
 
 const speedMap = { slow: 2000, normal: 1500, fast: 1000 }
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGame
+})
+
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => 'success')
+
+const resultTitle = computed(() => '训练完成')
+
+const resultSubtitle = computed(() => {
+  if (accuracy.value >= 0.9) {
+    return '出色的记忆力！'
+  } else if (accuracy.value >= 0.7) {
+    return '继续努力！'
+  }
+  return '多加练习，你会做得更好！'
+})
+
+const resultStats = computed(() => [
+  { label: '正确项', value: `${correctItems.value}/${itemCount.value}`, highlight: true },
+  { label: '顺序正确', value: `${correctOrder.value}/${itemCount.value}`, highlight: true },
+  { label: '准确率', value: `${(accuracy.value * 100).toFixed(0)}%`, highlight: false },
+  { label: '显示速度', value: speedOptions.find(s => s.value === displaySpeed.value)?.label || '', highlight: false }
+])
+
 function generateSequence() {
   // 从物品池中随机选择 itemCount + 3 个物品
   const shuffled = [...itemPool].sort(() => Math.random() - 0.5)
@@ -231,7 +221,8 @@ function generateSequence() {
   return { displaySequence, options }
 }
 
-function startTraining() {
+function handleStartTraining() {
+  // 立即进入训练界面并准备游戏
   isTraining.value = true
   showResult.value = false
   phase.value = 'display'
@@ -243,6 +234,17 @@ function startTraining() {
   currentIndex.value = 0
   userRecall.value = []
   isSubmitted.value = false
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGame() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
   trainingStore.startTraining('sequence')
   displayNextItem()
 }
@@ -294,6 +296,7 @@ function submitRecall() {
 function endTraining() {
   isTraining.value = false
   showResult.value = true
+  gameState.value = 'completed'
   trainingStore.endTraining()
   const score = Math.round(accuracy.value * 100)
   userStore.addTrainingRecord({
@@ -314,10 +317,30 @@ function endTraining() {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
 }
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  handleStartTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
+}
+
 function goBack() {
+  // 清理倒计时
+  countdown.cancel()
   router.back()
 }
+
+onUnmounted(() => {
+  // 清理倒计时
+  countdown.cleanup()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -469,9 +492,11 @@ function goBack() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+  gap: $spacing-sm;
 }
 
 .progress-bar {
@@ -480,7 +505,14 @@ function goBack() {
   background: rgba(255, 255, 255, 0.1);
   border-radius: $radius-full;
   overflow: hidden;
-  margin-bottom: $spacing-xl;
+  flex-shrink: 0;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, $accent-primary, $accent-secondary);
@@ -492,24 +524,33 @@ function goBack() {
   flex: 1;
   @include flex-center;
   flex-direction: column;
-  gap: $spacing-xl;
+  gap: $spacing-md;
+  transition: opacity 0.3s ease;
+  min-height: 0;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   .item-card {
     @include glass-card;
-    padding: $spacing-3xl;
+    padding: clamp($spacing-xl, 4vh, $spacing-3xl);
     text-align: center;
-    min-width: 300px;
+    max-width: 400px;
+    width: 100%;
+    
     .item-icon {
-      font-size: 6rem;
-      margin-bottom: $spacing-lg;
+      font-size: clamp(3rem, 8vw, 5rem);
+      margin-bottom: $spacing-md;
     }
     .item-name {
-      font-size: $font-2xl;
+      font-size: clamp($font-lg, 3vw, $font-2xl);
       font-weight: $font-bold;
-      margin-bottom: $spacing-sm;
+      margin-bottom: $spacing-xs;
     }
     .item-category {
-      font-size: $font-lg;
+      font-size: clamp($font-base, 2vw, $font-lg);
       color: $accent-primary;
     }
   }
@@ -522,6 +563,13 @@ function goBack() {
 .recall-info {
   text-align: center;
   margin-bottom: $spacing-xl;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   p {
     font-size: $font-lg;
     margin-bottom: $spacing-sm;
@@ -538,6 +586,12 @@ function goBack() {
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: $spacing-md;
   margin-bottom: $spacing-xl;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   @include mobile {
     grid-template-columns: repeat(3, 1fr);
@@ -574,6 +628,13 @@ function goBack() {
   @include glass-card;
   padding: $spacing-lg;
   margin-bottom: $spacing-xl;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   h3 {
     font-size: $font-base;
     margin-bottom: $spacing-md;
@@ -594,6 +655,13 @@ function goBack() {
 .recall-actions {
   display: flex;
   gap: $spacing-md;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   button {
     @include button-reset;
     @include click-feedback;

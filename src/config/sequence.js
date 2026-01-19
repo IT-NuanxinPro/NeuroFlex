@@ -33,17 +33,17 @@ export const itemPool = [
   { name: 'T恤', category: '服装', icon: '👕' },
   { name: '帽子', category: '服装', icon: '🎩' },
   { name: '鞋子', category: '服装', icon: '👟' },
-  { name: '手套', category: '服装', icon: '🧤' },
+  { name: '手套', category: '服装', icon: '🧤' }
 ]
 
 export const itemCountOptions = [
   { label: '6个', value: '6' },
   { label: '9个', value: '9' },
-  { label: '12个', value: '12' },
+  { label: '12个', value: '12' }
 ]
 
 export const speedOptions = [
   { label: '慢速', value: 'slow' },
   { label: '正常', value: 'normal' },
-  { label: '快速', value: 'fast' },
+  { label: '快速', value: 'fast' }
 ]

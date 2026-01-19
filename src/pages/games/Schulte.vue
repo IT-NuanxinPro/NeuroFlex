@@ -7,7 +7,7 @@
         </svg>
       </button>
       <h1 class="page-title">舒尔特方格</h1>
-      <div class="timer" v-if="isTraining">{{ formatTime(elapsedTime) }}</div>
+      <div v-if="isTraining" class="timer">{{ formatTime(elapsedTime) }}</div>
     </header>
 
     <!-- 配置界面 -->
@@ -44,18 +44,33 @@
           </div>
         </div>
 
-        <div class="switch-option">
-          <span class="switch-label">高亮已点击数字</span>
-          <van-switch v-model="showFeedback" size="24px" />
+        <div class="settings-section">
+          <h4 class="section-title">{{ settingsConfig.sections.assist.title }}</h4>
+
+          <div class="switch-option">
+            <span class="switch-label">{{ settingsConfig.options.highlightShown.label }}</span>
+            <van-switch v-model="showFeedback" size="24px" @change="saveSettings" />
+          </div>
         </div>
 
-        <button class="start-button" @click="startTraining">开始训练</button>
+        <button class="start-button" @click="handleStartTraining">开始训练</button>
       </div>
     </div>
 
     <!-- 训练界面 -->
     <div v-if="isTraining" class="training-screen">
-      <div class="grid-container" :style="{ '--grid-size': gridSize }">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
+      <div
+        class="grid-container"
+        :class="{ disabled: isGameDisabled }"
+        :style="{ '--grid-size': gridSize }"
+      >
         <button
           v-for="(cell, index) in grid"
           :key="index"
@@ -78,68 +93,39 @@
           当前目标: <strong>{{ currentTarget }}</strong>
         </p>
         <p>
-          已完成: {{ showFeedback ? clickedNumbers.length : currentTarget - 1 }} /
+          已完成: {{ showFeedback ? clickedNumbers.length : (mode === 'reverse' ? totalNumbers - currentTarget : currentTarget - 1) }} /
           {{ totalNumbers }}
+        </p>
+        <p>
+          错误次数: <strong class="error-count">{{ wrongCount }}</strong>
         </p>
       </div>
     </div>
 
-    <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon" :class="isSuccess ? 'success' : 'timeout'">
-          <svg
-            v-if="isSuccess"
-            width="60"
-            height="60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg v-else width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-
-        <h2>{{ isSuccess ? '完成！' : '超时' }}</h2>
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">用时</span>
-            <span class="stat-value">{{ formatTime(finalTime) }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">标准时间</span>
-            <span class="stat-value">{{ getTimeLimit(gridSize) }}秒</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">平均反应</span>
-            <span class="stat-value">{{ averageReactionTime }}ms</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">错误次数</span>
-            <span class="stat-value">{{ wrongCount }}</span>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetTraining">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <!-- 结果弹窗 -->
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
-import { gridSizes, modeOptions, timeLimitMap } from '@/config/schulte.js'
+import { useGameCountdown } from '@/composables/useGameCountdown'
+import { gridSizes, modeOptions, timeLimitMap, settingsConfig } from '@/config/schulte.js'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 import { Switch as VanSwitch } from 'vant'
 import 'vant/lib/switch/style'
 
@@ -150,9 +136,71 @@ const trainingStore = useTrainingStore()
 // 配置
 const gridSize = ref(gridSizes[1])
 const mode = ref('number')
-const showFeedback = ref(false) // 是否显示正确点击的视觉反馈
+const showFeedback = ref(settingsConfig.options.highlightShown.default) // 使用配置的默认值
 
-// 训练状态
+// 设置持久化相关
+const STORAGE_KEY = settingsConfig.options.highlightShown.storageKey
+
+// 检查 localStorage 是否可用
+function isLocalStorageAvailable() {
+  try {
+    const testKey = '__localStorage_test__'
+    localStorage.setItem(testKey, 'test')
+    localStorage.removeItem(testKey)
+    return true
+  } catch (error) {
+    console.error('localStorage 不可用:', error)
+    return false
+  }
+}
+
+// 从 localStorage 加载设置
+function loadSettings() {
+  if (!isLocalStorageAvailable()) {
+    console.warn('localStorage 不可用，使用默认设置')
+    return
+  }
+
+  try {
+    const savedValue = localStorage.getItem(STORAGE_KEY)
+    if (savedValue !== null) {
+      // 解析保存的值
+      const parsedValue = JSON.parse(savedValue)
+      showFeedback.value = parsedValue
+    }
+  } catch (error) {
+    console.error('加载设置失败，使用默认值:', error)
+    // 如果数据损坏，清除并使用默认值
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (removeError) {
+      console.error('清除损坏数据失败:', removeError)
+    }
+    // 回退到默认值（已经在初始化时设置）
+  }
+}
+
+// 保存设置到 localStorage
+function saveSettings() {
+  if (!isLocalStorageAvailable()) {
+    console.warn('localStorage 不可用，设置仅在会话期间有效')
+    return
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(showFeedback.value))
+  } catch (error) {
+    if (error.name === 'QuotaExceededError') {
+      console.error('localStorage 配额已满，无法保存设置:', error)
+    } else {
+      console.error('保存设置失败:', error)
+    }
+    // 继续使用内存状态
+  }
+}
+
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const grid = ref([])
@@ -169,7 +217,18 @@ const isSuccess = ref(false)
 
 let timer = null
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGame
+  // onTick 回调可选，暂不使用
+})
+
 const totalNumbers = computed(() => gridSize.value * gridSize.value)
+
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
 
 const averageReactionTime = computed(() => {
   if (reactionTimes.value.length === 0) return 0
@@ -177,12 +236,56 @@ const averageReactionTime = computed(() => {
   return Math.round(sum / reactionTimes.value.length)
 })
 
+// 结果弹窗相关
+const resultType = computed(() => (isSuccess.value ? 'success' : 'timeout'))
+
+const resultTitle = computed(() => (isSuccess.value ? '完成！' : '超时'))
+
+const resultSubtitle = computed(() => {
+  if (isSuccess.value) {
+    return wrongCount.value === 0 ? '完美表现！' : '继续努力！'
+  }
+  return '再试一次，你可以做得更好！'
+})
+
+const resultStats = computed(() => [
+  {
+    label: '用时',
+    value: formatTime(finalTime.value),
+    highlight: true
+  },
+  {
+    label: '标准时间',
+    value: `${getTimeLimit(gridSize.value)}秒`,
+    highlight: false
+  },
+  {
+    label: '平均反应',
+    value: `${averageReactionTime.value}ms`,
+    highlight: true
+  },
+  {
+    label: '错误次数',
+    value: `${wrongCount.value}`,
+    highlight: false
+  }
+])
+
 function getTimeLimit(size) {
   return timeLimitMap[size] || 30
 }
 
 function generateGrid() {
-  const numbers = Array.from({ length: totalNumbers.value }, (_, i) => i + 1)
+  // 根据模式生成数字序列
+  let numbers
+  if (mode.value === 'reverse') {
+    // 降序模式：从大到小
+    numbers = Array.from({ length: totalNumbers.value }, (_, i) => totalNumbers.value - i)
+  } else {
+    // 正常模式和多色模式：从小到大
+    numbers = Array.from({ length: totalNumbers.value }, (_, i) => i + 1)
+  }
+  
   // Fisher-Yates 洗牌算法
   for (let i = numbers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
@@ -214,17 +317,36 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)]
 }
 
-function startTraining() {
+function handleStartTraining() {
+  // 立即进入训练界面并显示宫格
   isTraining.value = true
   showResult.value = false
   grid.value = generateGrid()
   wrongCount.value = 0
   clickedNumbers.value = []
-  currentTarget.value = 1
-  startTime.value = Date.now()
-  elapsedTime.value = 0
+  
+  // 根据模式设置初始目标
+  if (mode.value === 'reverse') {
+    currentTarget.value = totalNumbers.value // 降序模式从最大数字开始
+  } else {
+    currentTarget.value = 1 // 正常模式从1开始
+  }
+  
   reactionTimes.value = []
   lastClickWrong.value = false
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGame() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
+  startTime.value = Date.now()
+  elapsedTime.value = 0
 
   trainingStore.startTraining('schulte')
 
@@ -250,17 +372,21 @@ function handleClick(num, index) {
       clickedNumbers.value.push(num)
     }
 
-    currentTarget.value++
     lastClickWrong.value = false
 
-    // 根据设置决定是否显示动画反馈
-    if (showFeedback.value) {
-      const cell = document.querySelectorAll('.grid-cell')[index]
-    }
-
-    // 检查是否完成
-    if (currentTarget.value > totalNumbers.value) {
-      endTraining(true)
+    // 根据模式更新目标
+    if (mode.value === 'reverse') {
+      currentTarget.value-- // 降序模式递减
+      // 检查是否完成（降序模式到0结束）
+      if (currentTarget.value < 1) {
+        endTraining(true)
+      }
+    } else {
+      currentTarget.value++ // 正常模式递增
+      // 检查是否完成（正常模式超过最大值结束）
+      if (currentTarget.value > totalNumbers.value) {
+        endTraining(true)
+      }
     }
   } else {
     // 错误点击 - 始终显示错误反馈
@@ -268,9 +394,6 @@ function handleClick(num, index) {
     lastClickWrong.value = true
     lastClickIndex.value = index
 
-    // 错误反馈动画
-    const cell = document.querySelectorAll('.grid-cell')[index]
-    
     setTimeout(() => {
       lastClickWrong.value = false
     }, 400)
@@ -283,6 +406,7 @@ function endTraining(success) {
     timer = null
   }
 
+  gameState.value = 'completed'
   isTraining.value = false
   showResult.value = true
   finalTime.value = elapsedTime.value
@@ -311,6 +435,18 @@ function endTraining(success) {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  handleStartTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function formatTime(ms) {
@@ -323,10 +459,17 @@ function goBack() {
   router.back()
 }
 
+// 组件挂载时加载设置
+onMounted(() => {
+  loadSettings()
+})
+
 onUnmounted(() => {
   if (timer) {
     clearInterval(timer)
   }
+  // 清理倒计时
+  countdown.cleanup()
 })
 </script>
 
@@ -342,7 +485,7 @@ onUnmounted(() => {
 .page-header {
   @include safe-area-padding(top);
   display: flex;
-    align-items: center;
+  align-items: center;
   justify-content: center;
   padding: $spacing-md $spacing-lg;
   background: rgba(255, 255, 255, 0.02);
@@ -394,8 +537,7 @@ onUnmounted(() => {
   @include custom-scrollbar;
 }
 
-.config-card,
-.result-card {
+.config-card {
   @include glass-card;
   padding: $spacing-2xl;
   max-width: 600px; // 从500px增加到600px
@@ -575,7 +717,7 @@ onUnmounted(() => {
 .training-screen {
   flex: 1;
   display: flex;
-    align-items: center;
+  align-items: center;
   justify-content: center;
   flex-direction: column;
   // 精确计算：100vh - 标题栏60px
@@ -596,6 +738,13 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.02);
   border-radius: $radius-lg;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+
+  &.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: blur(12px);
+  }
 
   // 根据格子数量动态设置间距和内边距
   gap: calc(36px - var(--grid-size) * 2px);
@@ -765,187 +914,15 @@ onUnmounted(() => {
         margin: 0 $spacing-xs;
       }
     }
-  }
-}
 
-.result-icon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto $spacing-lg;
-  border-radius: $radius-full;
-  @include flex-center;
-  position: relative;
-
-  @include mobile {
-    width: 80px;
-    height: 80px;
-    margin-bottom: $spacing-md;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: $radius-full;
-    padding: 4px;
-    background: linear-gradient(
-      135deg,
-      currentColor 0%,
-      transparent 100%
-    );
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.5;
-  }
-
-  svg {
-    @include mobile {
-      width: 48px;
-      height: 48px;
-    }
-  }
-
-  &.success {
-    background: rgba(0, 255, 136, 0.2);
-    color: $accent-success;
-    box-shadow:
-      0 8px 32px rgba(0, 255, 136, 0.4),
-      0 0 60px rgba(0, 255, 136, 0.2);
-  }
-
-  &.timeout {
-    background: rgba(255, 170, 0, 0.2);
-    color: $accent-warning;
-    box-shadow:
-      0 8px 32px rgba(255, 170, 0, 0.4),
-      0 0 60px rgba(255, 170, 0, 0.2);
-  }
-}
-
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-lg;
-  margin: $spacing-2xl 0;
-
-  @include mobile {
-    // 移动端：垂直堆叠，每行一个stat
-    grid-template-columns: 1fr;
-    gap: $spacing-md;
-    margin: $fluid-spacing-lg 0;
-  }
-
-  .stat {
-    text-align: center;
-    padding: $spacing-lg;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: $radius-md;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all $transition-base;
-
-    @include mobile {
-      // 移动端：横向布局，label和value在一行
-      display: flex;
-            justify-content: space-between;
-      align-items: center;
-      padding: $spacing-md $spacing-lg;
-      text-align: left;
-    }
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(0, 212, 255, 0.3);
-      transform: translateY(-2px);
-    }
-
-    .stat-label {
-      display: block;
-      font-size: $font-sm;
-      color: $text-secondary;
-      margin-bottom: $spacing-sm;
-      font-weight: $font-medium;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-
-      @include mobile {
-        margin-bottom: 0;
-        font-size: $fluid-font-sm;
-        text-transform: none;
-        letter-spacing: 0;
-      }
-    }
-
-    .stat-value {
-      display: block;
+    .error-count {
+      color: $accent-error;
       font-size: $font-2xl;
-      font-weight: $font-bold;
-      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      text-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
 
       @include mobile {
-        font-size: $fluid-font-lg;
+        font-size: $fluid-font-xl;
       }
-    }
-  }
-}
-
-.result-actions {
-  display: flex;
-    gap: $spacing-sm;
-
-  button {
-    @include button-reset;
-    flex: 1;
-    padding: $spacing-md $spacing-lg;
-    border-radius: $radius-md;
-    font-weight: $font-medium;
-    font-size: $font-sm;
-    white-space: nowrap;
-    transition: all $transition-base;
-
-    @include mobile {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-    }
-  }
-
-  .secondary-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    color: $text-primary;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.3);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-
-  .primary-button {
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    color: $text-primary;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 6px 16px rgba(0, 212, 255, 0.4),
-        0 0 30px rgba(0, 212, 255, 0.2);
-    }
-
-    &:active {
-      transform: translateY(0);
     }
   }
 }
@@ -959,7 +936,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
   transition: all $transition-base;
-  margin-bottom: $spacing-xl;
+  margin-bottom: 0;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -977,6 +954,18 @@ onUnmounted(() => {
     --van-switch-on-background: linear-gradient(135deg, #00d4ff, #7b2cbf);
     --van-switch-background: rgba(255, 255, 255, 0.15);
     --van-switch-node-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.settings-section {
+  margin-bottom: $spacing-xl;
+
+  .section-title {
+    font-size: $font-base;
+    font-weight: $font-medium;
+    color: $text-primary;
+    margin-bottom: 12px;
+    margin-top: 0;
   }
 }
 </style>

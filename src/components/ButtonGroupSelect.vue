@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
   modelValue: {
     type: [String, Number],
     required: true
@@ -33,7 +33,7 @@ function selectOption(value) {
 
 <style lang="scss" scoped>
 .button-group-select {
-  @include button-grid(70px,$spacing-sm);
+  @include button-grid(70px, $spacing-sm);
   width: 100%;
 
   .option-button {

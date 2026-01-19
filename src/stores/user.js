@@ -109,11 +109,20 @@ export const useUserStore = defineStore('user', () => {
   // 初始化时加载数据
   loadFromStorage()
 
-  // 监听数据变化自动保存
+  // 监听数据变化自动保存（使用防抖避免频繁写入）
+  let saveTimer = null
   watch(
     [profile, trainingHistory, preferences],
     () => {
-      saveToStorage()
+      // 清除之前的定时器
+      if (saveTimer) {
+        clearTimeout(saveTimer)
+      }
+      // 延迟500ms保存，避免频繁写入
+      saveTimer = setTimeout(() => {
+        saveToStorage()
+        saveTimer = null
+      }, 500)
     },
     { deep: true }
   )

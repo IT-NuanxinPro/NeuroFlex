@@ -46,18 +46,25 @@
           </p>
         </div>
 
-        <button class="start-button" @click="startTraining">开始训练</button>
+        <button class="start-button" @click="handleStartTraining">开始训练</button>
       </div>
     </div>
 
     <!-- 训练界面 - 记忆阶段 -->
     <div v-if="isTraining && phase === 'memorize'" class="training-screen">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
       <div class="phase-title">
         <h2>请记住这些物品并构建故事</h2>
         <p class="timer">剩余时间: {{ remainingTime }}秒</p>
       </div>
 
-      <div class="items-grid">
+      <div class="items-grid" :class="{ disabled: isGameDisabled }">
         <div v-for="(item, idx) in items" :key="idx" class="item-card">
           <div class="item-number">{{ idx + 1 }}</div>
           <div class="item-icon">{{ item.icon }}</div>
@@ -65,12 +72,13 @@
         </div>
       </div>
 
-      <div class="story-input-section">
+      <div class="story-input-section" :class="{ disabled: isGameDisabled }">
         <label>构建你的故事（可选）</label>
         <textarea
           v-model="userStory"
           placeholder="在这里写下你的联想故事，帮助记忆..."
           class="story-textarea"
+          :disabled="isGameDisabled"
         ></textarea>
       </div>
     </div>
@@ -87,15 +95,15 @@
           v-for="item in availableItems"
           :key="item.name"
           :class="['recall-button', { disabled: isSubmitted }]"
-          @click="selectItem(item)"
           :disabled="isSubmitted"
+          @click="selectItem(item)"
         >
           <div class="item-icon">{{ item.icon }}</div>
           <div class="item-name">{{ item.name }}</div>
         </button>
       </div>
 
-      <div class="selected-sequence" v-if="userRecall.length > 0">
+      <div v-if="userRecall.length > 0" class="selected-sequence">
         <h3>已选择的顺序：</h3>
         <div class="selected-items">
           <div v-for="(item, idx) in userRecall" :key="idx" class="selected-item">
@@ -109,15 +117,15 @@
       <div class="recall-actions">
         <button
           class="secondary-button"
-          @click="undoSelection"
           :disabled="userRecall.length === 0 || isSubmitted"
+          @click="undoSelection"
         >
           撤销
         </button>
         <button
           class="primary-button"
-          @click="submitRecall"
           :disabled="userRecall.length !== items.length || isSubmitted"
+          @click="submitRecall"
         >
           提交答案
         </button>
@@ -125,86 +133,17 @@
     </div>
 
     <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon" :class="accuracy >= 0.8 ? 'success' : 'partial'">
-          <svg
-            v-if="accuracy >= 0.8"
-            width="60"
-            height="60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg v-else width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        </div>
-
-        <h2>{{ accuracy >= 0.8 ? '完成！' : '继续努力' }}</h2>
-
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">物品正确</span>
-            <span class="stat-value">{{ correctItems }} / {{ items.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">顺序正确</span>
-            <span class="stat-value">{{ correctOrder }} / {{ items.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">准确率</span>
-            <span class="stat-value">{{ Math.round(accuracy * 100) }}%</span>
-          </div>
-        </div>
-
-        <div class="story-review" v-if="userStory">
-          <h3>你的故事</h3>
-          <p class="user-story">{{ userStory }}</p>
-        </div>
-
-        <div class="answer-comparison">
-          <h3>答案对比</h3>
-          <div class="comparison-grid">
-            <div class="comparison-column">
-              <h4>正确答案</h4>
-              <div class="answer-list">
-                <div v-for="(item, idx) in items" :key="idx" class="answer-item">
-                  {{ idx + 1 }}. {{ item.icon }} {{ item.name }}
-                </div>
-              </div>
-            </div>
-            <div class="comparison-column">
-              <h4>你的答案</h4>
-              <div class="answer-list">
-                <div
-                  v-for="(item, idx) in userRecall"
-                  :key="idx"
-                  :class="[
-                    'answer-item',
-                    {
-                      correct: item.name === items[idx]?.name,
-                      wrong: item.name !== items[idx]?.name
-                    }
-                  ]"
-                >
-                  {{ idx + 1 }}. {{ item.icon }} {{ item.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetTraining">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
@@ -213,17 +152,20 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { useGameCountdown } from '@/composables/useGameCountdown'
 import { itemPool, itemCountOptions } from '@/config/memoryStory.js'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-
 // 配置
 const itemCount = ref(parseInt(itemCountOptions[0].value))
 
-// 训练状态
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const phase = ref('memorize') // 'memorize' | 'recall'
@@ -238,16 +180,45 @@ const remainingTime = ref(60)
 
 let memoryTimer = null
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGame
+})
+
 const availableItems = computed(() => {
   return itemPool.filter(item => !userRecall.value.find(r => r.name === item.name))
 })
+
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => (accuracy.value >= 0.8 ? 'success' : 'warning'))
+
+const resultTitle = computed(() => (accuracy.value >= 0.8 ? '完成！' : '继续努力'))
+
+const resultSubtitle = computed(() => {
+  if (accuracy.value >= 0.9) return '记忆力超群！'
+  if (accuracy.value >= 0.8) return '表现不错，继续保持！'
+  return '多加练习，提升记忆力！'
+})
+
+const resultStats = computed(() => [
+  { label: '物品正确', value: `${correctItems.value}/${items.value.length}`, highlight: true },
+  { label: '顺序正确', value: `${correctOrder.value}/${items.value.length}`, highlight: true },
+  { label: '准确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: false },
+  { label: '记忆时间', value: `${itemCount.value * 10}秒`, highlight: false }
+])
 
 function generateItems() {
   const shuffled = [...itemPool].sort(() => Math.random() - 0.5)
   return shuffled.slice(0, itemCount.value)
 }
 
-function startTraining() {
+function handleStartTraining() {
+  // 立即进入训练界面并显示物品
   isTraining.value = true
   showResult.value = false
   phase.value = 'memorize'
@@ -256,6 +227,17 @@ function startTraining() {
   userRecall.value = []
   isSubmitted.value = false
   remainingTime.value = itemCount.value * 10 // 每个物品10秒
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGame() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
 
   trainingStore.startTraining('memory-story')
 
@@ -314,6 +296,7 @@ function submitRecall() {
 function endTraining() {
   isTraining.value = false
   showResult.value = true
+  gameState.value = 'completed'
 
   if (memoryTimer) {
     clearInterval(memoryTimer)
@@ -342,10 +325,22 @@ function endTraining() {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
   if (memoryTimer) {
     clearInterval(memoryTimer)
     memoryTimer = null
   }
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  handleStartTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function goBack() {
@@ -353,6 +348,8 @@ function goBack() {
     clearInterval(memoryTimer)
     memoryTimer = null
   }
+  // 清理倒计时
+  countdown.cancel()
   router.back()
 }
 
@@ -361,6 +358,8 @@ onUnmounted(() => {
     clearInterval(memoryTimer)
     memoryTimer = null
   }
+  // 清理倒计时
+  countdown.cleanup()
 })
 </script>
 
@@ -413,57 +412,84 @@ onUnmounted(() => {
 .result-screen {
   flex: 1;
   @include flex-center;
-  padding: calc($spacing-md + 60px) $spacing-lg $spacing-md;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  padding: calc($spacing-md + 60px) $spacing-md $spacing-md;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .config-card,
 .result-card {
   @include glass-card;
-  padding: $spacing-2xl;
-  max-width: 700px;
+  padding: $spacing-lg;
+  max-width: 600px;
   width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  @include custom-scrollbar;
+
   @include mobile {
-    padding: $spacing-lg;
+    padding: $spacing-md;
   }
 
   h2 {
     text-align: center;
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-md;
+    font-size: $font-xl;
+
+    @include mobile {
+      font-size: $font-lg;
+      margin-bottom: $spacing-sm;
+    }
   }
 }
 
 .config-group {
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-md;
+
+  @include mobile {
+    margin-bottom: $spacing-sm;
+  }
 
   label {
     display: block;
     font-weight: $font-medium;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
+    font-size: $font-sm;
   }
 
   .config-hint {
-    margin-top: $spacing-sm;
-    font-size: $font-sm;
+    margin-top: $spacing-xs;
+    font-size: $font-xs;
     color: $text-secondary;
     text-align: center;
   }
 }
 
 .button-group {
-  @include button-grid(70px,$spacing-sm);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+
+  @include mobile {
+    gap: $spacing-xs;
+  }
 
   .count-button {
     @include button-reset;
     @include click-feedback;
-    padding: $spacing-md;
+    padding: $spacing-sm;
     border-radius: $radius-md;
     background: rgba(255, 255, 255, 0.05);
     border: 2px solid rgba(255, 255, 255, 0.1);
     color: $text-primary;
     font-weight: $font-medium;
+    font-size: $font-sm;
     transition: all $transition-base;
+
+    @include mobile {
+      padding: $spacing-xs;
+      font-size: $font-xs;
+    }
 
     &.active {
       background: rgba(0, 212, 255, 0.1);
@@ -473,32 +499,50 @@ onUnmounted(() => {
         inset 0 0 20px rgba(0, 212, 255, 0.1);
     }
 
-    &:hover:not(.active) {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(0, 212, 255, 0.3);
+    // 只在桌面端启用 hover
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(0, 212, 255, 0.3);
+      }
     }
   }
 }
 
 .instruction-box {
   @include glass-card;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-xl;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  @include mobile {
+    padding: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
 
   h3 {
-    font-size: $font-base;
-    margin-bottom: $spacing-md;
+    font-size: $font-sm;
+    margin-bottom: $spacing-sm;
     color: $accent-primary;
+
+    @include mobile {
+      font-size: $font-xs;
+      margin-bottom: $spacing-xs;
+    }
   }
 
   ul {
     list-style: none;
     padding: 0;
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
 
     li {
-      padding: $spacing-sm 0;
-      font-size: $font-sm;
+      padding: $spacing-xs 0;
+      font-size: $font-xs;
+      line-height: 1.4;
+
+      @include mobile {
+        font-size: 10px;
+      }
 
       strong {
         color: $accent-secondary;
@@ -507,16 +551,24 @@ onUnmounted(() => {
   }
 
   .example {
-    font-size: $font-sm;
+    font-size: 10px;
     color: $text-secondary;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
+
+    @include mobile {
+      font-size: 9px;
+    }
   }
 
   .example-story {
-    font-size: $font-sm;
+    font-size: 10px;
     color: $text-secondary;
     font-style: italic;
-    line-height: 1.6;
+    line-height: 1.5;
+
+    @include mobile {
+      font-size: 9px;
+    }
 
     em {
       color: $accent-primary;
@@ -529,27 +581,25 @@ onUnmounted(() => {
   @include button-reset;
   @include click-feedback;
   width: 100%;
-  padding: $spacing-lg;
+  padding: clamp($spacing-sm, 2.5vh, $spacing-md);
   border-radius: $radius-md;
   background: linear-gradient(135deg, $accent-primary, $accent-secondary);
   color: $text-primary;
-  font-size: $font-lg;
+  font-size: clamp($font-sm, 2.5vw, $font-base);
   font-weight: $font-bold;
   transition: all $transition-base;
   box-shadow:
     0 8px 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.1);
 
-  @include mobile {
-    padding: $spacing-md;
-    font-size: $font-base;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 12px 32px rgba(0, 212, 255, 0.5),
-      0 0 60px rgba(0, 212, 255, 0.3);
+  // 只在桌面端启用 hover
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 32px rgba(0, 212, 255, 0.5),
+        0 0 60px rgba(0, 212, 255, 0.3);
+    }
   }
 
   &:active {
@@ -561,10 +611,12 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  gap: $spacing-lg;
-  overflow-y: auto;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  gap: $spacing-sm;
+  overflow: hidden;
   @include custom-scrollbar;
+  position: relative;
+  min-height: 0;
 }
 
 .phase-title {
@@ -591,6 +643,12 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: $spacing-md;
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   .item-card {
     @include glass-card;
@@ -625,6 +683,13 @@ onUnmounted(() => {
 }
 
 .story-input-section {
+  transition: opacity 0.3s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   label {
     display: block;
     font-weight: $font-medium;
@@ -645,6 +710,10 @@ onUnmounted(() => {
     &:focus {
       outline: none;
       border-color: $accent-primary;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
     }
   }
 }
@@ -752,156 +821,6 @@ onUnmounted(() => {
   .primary-button {
     background: linear-gradient(135deg, $accent-primary, $accent-secondary);
     color: $text-primary;
-  }
-}
-
-.result-icon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto $spacing-lg;
-  border-radius: $radius-full;
-  @include flex-center;
-
-  &.success {
-    background: rgba(0, 255, 136, 0.2);
-    color: $accent-success;
-  }
-
-  &.partial {
-    background: rgba(255, 170, 0, 0.2);
-    color: $accent-warning;
-  }
-}
-
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-md;
-  margin: $spacing-xl 0;
-
-  .stat {
-    text-align: center;
-
-    .stat-label {
-      display: block;
-      font-size: $font-sm;
-      color: $text-secondary;
-      margin-bottom: $spacing-xs;
-    }
-
-    .stat-value {
-      display: block;
-      font-size: $font-xl;
-      font-weight: $font-bold;
-      color: $accent-primary;
-    }
-  }
-}
-
-.story-review {
-  @include glass-card;
-  padding: $spacing-lg;
-  margin: $spacing-xl 0;
-
-  h3 {
-    font-size: $font-base;
-    margin-bottom: $spacing-md;
-  }
-
-  .user-story {
-    font-size: $font-sm;
-    line-height: 1.6;
-    color: $text-secondary;
-    font-style: italic;
-  }
-}
-
-.answer-comparison {
-  margin: $spacing-xl 0;
-
-  h3 {
-    text-align: center;
-    margin-bottom: $spacing-lg;
-  }
-
-  .comparison-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: $spacing-lg;
-
-    @include mobile {
-      grid-template-columns: 1fr;
-    }
-
-    .comparison-column {
-      h4 {
-        font-size: $font-base;
-        margin-bottom: $spacing-md;
-        text-align: center;
-      }
-
-      .answer-list {
-        @include glass-card;
-        padding: $spacing-md;
-
-        .answer-item {
-          padding: $spacing-sm;
-          margin-bottom: $spacing-xs;
-          border-radius: $radius-sm;
-          font-size: $font-sm;
-
-          &.correct {
-            background: rgba(0, 255, 136, 0.2);
-          }
-
-          &.wrong {
-            background: rgba(255, 51, 102, 0.2);
-          }
-        }
-      }
-    }
-  }
-}
-
-.result-actions {
-  display: flex;
-  gap: $spacing-sm;
-
-  button {
-    @include button-reset;
-    @include click-feedback;
-    flex: 1;
-    padding: $spacing-md $spacing-lg;
-    border-radius: $radius-md;
-    font-weight: $font-medium;
-    font-size: $font-sm;
-    white-space: nowrap;
-    transition: all $transition-base;
-
-    @include mobile {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-    }
-  }
-
-  .secondary-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: $text-primary;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-  }
-
-  .primary-button {
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    color: $text-primary;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-    }
   }
 }
 </style>

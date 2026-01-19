@@ -4,7 +4,7 @@
       <div class="modal-container" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">{{ title }}</h3>
-          <button class="close-button" @click="handleClose">
+          <button v-if="showClose" class="close-button" @click="handleClose">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -15,7 +15,7 @@
           <slot></slot>
         </div>
 
-        <div class="modal-footer" v-if="showFooter">
+        <div v-if="showFooter" class="modal-footer">
           <button class="modal-button cancel-button" @click="handleCancel">
             {{ cancelText }}
           </button>
@@ -29,8 +29,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-
 const props = defineProps({
   visible: {
     type: Boolean,
@@ -41,6 +39,10 @@ const props = defineProps({
     default: '提示'
   },
   showFooter: {
+    type: Boolean,
+    default: true
+  },
+  showClose: {
     type: Boolean,
     default: true
   },

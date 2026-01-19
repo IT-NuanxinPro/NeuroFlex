@@ -1,10 +1,10 @@
 <template>
   <div class="home-page">
-    <!-- 顶部栏 -->
-    <header class="top-bar">
+    <!-- 移动端顶部栏 -->
+    <header v-if="!isPC" class="top-bar">
       <NeuroFlexLogo />
       <div class="user-actions">
-        <button class="icon-button" @click="goToSettings" aria-label="设置">
+        <button class="icon-button" aria-label="设置" @click="goToSettings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="12" cy="12" r="3"></circle>
             <path
@@ -16,8 +16,8 @@
     </header>
 
     <!-- 训练模块网格 -->
-    <main class="training-grid-container">
-      <div class="training-grid" ref="gridRef">
+    <main class="training-grid-container" :class="{ 'pc-layout': isPC }">
+      <div ref="gridRef" class="training-grid">
         <div
           v-for="module in trainingModules"
           :key="module.id"
@@ -35,13 +35,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { staggerFadeIn } from '@/utils/animations'
 import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
 
 const router = useRouter()
 const gridRef = ref(null)
+
+// 检测是否为PC端
+const isPC = ref(false)
+
+function detectPC() {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
+  
+  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
+  console.log('Home - isPC:', isPC.value, 'width:', window.innerWidth)
+}
+
+function handleResize() {
+  detectPC()
+}
+
+onMounted(() => {
+  detectPC()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 // 训练模块数据
 const trainingModules = [
@@ -105,12 +129,8 @@ function goToSettings() {
   router.push('/settings')
 }
 
-// 入场动画
-onMounted(() => {
-  if (gridRef.value) {
-    const cards = gridRef.value.querySelectorAll('.training-card')
-    staggerFadeIn(cards, { stagger: 0.1 })
-  }
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -147,8 +167,11 @@ onMounted(() => {
     @include flex-center;
     transition: background $transition-base;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
+    // 只在桌面端启用 hover 效果
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
     }
   }
 }
@@ -156,23 +179,39 @@ onMounted(() => {
 .training-grid-container {
   flex: 1;
   overflow-y: auto;
-  padding: $spacing-lg;
-  padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
+  padding: $spacing-xl $spacing-lg;
+  padding-bottom: calc($spacing-xl + 70px + env(safe-area-inset-bottom));
   @include custom-scrollbar;
   min-height: 0;
+  
+  // PC端布局调整
+  &.pc-layout {
+    padding: $spacing-2xl $spacing-lg;
+  }
 }
 
 .training-grid {
-  @include grid-layout(1, $spacing-md);
-  max-width: 1200px;
+  display: grid;
+  gap: $spacing-md;
+  max-width: 1800px;
   margin: 0 auto;
+  grid-template-columns: 1fr;
+  width: 100%;
 
-  @include respond-to(sm) {
-    @include grid-layout(2, $spacing-lg);
+  // 小屏手机：1列
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  @include respond-to(lg) {
-    @include grid-layout(3, $spacing-lg);
+  // 平板：3列
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  // PC：4列
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-xl;
   }
 }
 
@@ -182,24 +221,37 @@ onMounted(() => {
   padding: $spacing-xl;
   cursor: pointer;
   transition: all $transition-base;
-  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 212, 255, 0.2);
-    border-color: rgba(0, 212, 255, 0.3);
+  @media (min-width: 1200px) {
+    padding: $spacing-2xl;
+  }
+
+  // 只在桌面端启用 hover 效果，移动端禁用以提升性能
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 212, 255, 0.2);
+      border-color: rgba(0, 212, 255, 0.3);
+    }
   }
 
   .card-icon {
-    width: 60px;
-    height: 60px;
-    margin: 0 auto $spacing-lg;
+    width: 48px;
+    height: 48px;
+    margin-bottom: $spacing-lg;
     border-radius: $radius-md;
     background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
     border: 1px solid rgba(0, 212, 255, 0.2);
     @include flex-center;
-    font-size: $font-3xl;
-    
+
+    @media (min-width: 1200px) {
+      width: 56px;
+      height: 56px;
+    }
+
     svg {
       color: $accent-primary;
       filter: drop-shadow(0 2px 4px rgba(0, 212, 255, 0.3));
@@ -207,19 +259,29 @@ onMounted(() => {
   }
 
   .card-title {
-    font-size: $font-xl;
-    font-weight: $font-semibold;
+    font-size: $font-lg;
+    font-weight: $font-bold;
     color: $text-primary;
-    text-align: center;
     margin-bottom: $spacing-sm;
+    text-align: left;
+    width: 100%;
+
+    @media (min-width: 1200px) {
+      font-size: $font-xl;
+    }
   }
 
   .card-description {
     font-size: $font-sm;
     color: $text-secondary;
-    text-align: center;
     margin-bottom: $spacing-lg;
     line-height: 1.6;
+    text-align: left;
+    flex: 1;
+
+    @media (min-width: 1200px) {
+      font-size: $font-base;
+    }
   }
 
   .enter-button {
@@ -229,12 +291,16 @@ onMounted(() => {
     border-radius: $radius-md;
     background: linear-gradient(135deg, $accent-primary, $accent-secondary);
     color: $text-primary;
-    font-weight: $font-medium;
+    font-weight: $font-semibold;
+    font-size: $font-base;
     transition: all $transition-base;
 
-    &:hover {
-      transform: scale(1.02);
-      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    // 只在桌面端启用 hover 效果
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+      }
     }
   }
 }

@@ -42,6 +42,13 @@
 
     <!-- 训练界面 -->
     <div v-if="isTraining" class="training-screen">
+      <!-- 倒计时遮罩层 -->
+      <GameCountdown
+        :current-count="countdown.currentCount.value"
+        :progress="countdown.progress.value"
+        :is-visible="countdown.isCountingDown.value"
+      />
+
       <div class="rules-display">
         <h3>分类规则</h3>
         <p v-if="dimensions === 1">请选择物品的<strong>品类</strong></p>
@@ -53,15 +60,15 @@
         <p class="remaining-time">{{ (remainingMs / 1000).toFixed(1) }}s</p>
       </div>
 
-      <div class="item-display" v-if="currentItem">
+      <div v-if="currentItem" class="item-display" :class="{ disabled: isGameDisabled }">
         <div class="item-card">
           <div class="item-icon">{{ currentItem.icon }}</div>
           <div class="item-name">{{ currentItem.name }}</div>
-          <div class="item-price" v-if="dimensions === 2">¥{{ currentItem.price }}</div>
+          <div v-if="dimensions === 2" class="item-price">¥{{ currentItem.price }}</div>
         </div>
       </div>
 
-      <div class="answer-options" v-if="currentItem">
+      <div v-if="currentItem" class="answer-options" :class="{ disabled: isGameDisabled }">
         <button
           v-for="option in currentOptions"
           :key="option"
@@ -72,8 +79,8 @@
               wrong: showFeedback && option === userAnswer && option !== correctAnswer
             }
           ]"
+          :disabled="showFeedback || isGameDisabled"
           @click="selectAnswer(option)"
-          :disabled="showFeedback"
         >
           {{ option }}
         </button>
@@ -81,58 +88,29 @@
     </div>
 
     <!-- 结果界面 -->
-    <div v-if="showResult" class="result-screen">
-      <div class="result-card">
-        <div class="result-icon" :class="accuracy >= 0.8 ? 'success' : 'partial'">
-          <svg
-            v-if="accuracy >= 0.8"
-            width="60"
-            height="60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <svg v-else width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        </div>
-
-        <h2>{{ accuracy >= 0.8 ? '完成！' : '继续努力' }}</h2>
-
-        <div class="result-stats">
-          <div class="stat">
-            <span class="stat-label">正确数</span>
-            <span class="stat-value">{{ correctCount }} / {{ items.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">准确率</span>
-            <span class="stat-value">{{ Math.round(accuracy * 100) }}%</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">平均反应</span>
-            <span class="stat-value">{{ averageReactionTime }}ms</span>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="secondary-button" @click="resetTraining">再来一次</button>
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
-      </div>
-    </div>
+    <GameResult
+      :visible="showResult"
+      :type="resultType"
+      :title="resultTitle"
+      :subtitle="resultSubtitle"
+      :stats="resultStats"
+      :show-retry="true"
+      close-text="返回首页"
+      @retry="handleRetry"
+      @close="handleClose"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
+import { useGameCountdown } from '@/composables/useGameCountdown'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import GameCountdown from '@/components/GameCountdown.vue'
+import GameResult from '@/components/GameResult.vue'
 import { itemPool, itemCountOptions, displayTimeOptions } from '@/config/categorize.js'
 
 const router = useRouter()
@@ -146,7 +124,8 @@ const dimensions = ref(1)
 const itemCount = ref('10')
 const displayTime = ref('2500')
 
-// 训练状态
+// 游戏状态
+const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const items = ref([])
@@ -163,6 +142,12 @@ const itemStartTime = ref(0)
 const remainingMs = ref(0)
 let countdownInterval = null
 
+// 倒计时设置
+const countdown = useGameCountdown({
+  duration: 3,
+  onComplete: startGameAfterCountdown
+})
+
 const correctCount = computed(() => results.value.filter(r => r.correct).length)
 const accuracy = computed(() => correctCount.value / items.value.length)
 const averageReactionTime = computed(() => {
@@ -170,6 +155,28 @@ const averageReactionTime = computed(() => {
   const sum = reactionTimes.value.reduce((a, b) => a + b, 0)
   return Math.round(sum / reactionTimes.value.length)
 })
+
+const isGameDisabled = computed(() => {
+  return gameState.value === 'countdown'
+})
+
+// 结果弹窗相关
+const resultType = computed(() => (accuracy.value >= 0.8 ? 'success' : 'warning'))
+
+const resultTitle = computed(() => (accuracy.value >= 0.8 ? '完成！' : '继续努力'))
+
+const resultSubtitle = computed(() => {
+  if (accuracy.value >= 0.9) return '完美表现！'
+  if (accuracy.value >= 0.8) return '表现不错，继续保持！'
+  return '多加练习，你会更好！'
+})
+
+const resultStats = computed(() => [
+  { label: '正确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: true },
+  { label: '正确数', value: `${correctCount.value}/${items.value.length}`, highlight: false },
+  { label: '平均反应', value: `${averageReactionTime.value}ms`, highlight: true },
+  { label: '错误数', value: `${items.value.length - correctCount.value}`, highlight: false }
+])
 
 function generateItems() {
   const shuffled = [...itemPool].sort(() => Math.random() - 0.5)
@@ -200,12 +207,24 @@ function generateOptions(item) {
 }
 
 function startTraining() {
+  // 立即进入训练界面
   isTraining.value = true
   showResult.value = false
   items.value = generateItems()
   currentIndex.value = 0
   results.value = []
   reactionTimes.value = []
+
+  // 设置为倒计时状态
+  gameState.value = 'countdown'
+
+  // 启动倒计时
+  countdown.start()
+}
+
+function startGameAfterCountdown() {
+  // 倒计时结束后，开始游戏
+  gameState.value = 'active'
 
   trainingStore.startTraining('categorize')
 
@@ -293,6 +312,7 @@ function selectAnswer(option) {
 }
 
 function endTraining() {
+  gameState.value = 'completed'
   isTraining.value = false
   showResult.value = true
 
@@ -320,11 +340,34 @@ function endTraining() {
 function resetTraining() {
   showResult.value = false
   isTraining.value = false
+  gameState.value = 'idle'
+}
+
+function handleRetry() {
+  showResult.value = false
+  resetTraining()
+  startTraining()
+}
+
+function handleClose() {
+  showResult.value = false
+  goBack()
 }
 
 function goBack() {
   router.back()
 }
+
+onUnmounted(() => {
+  if (itemTimer) {
+    clearTimeout(itemTimer)
+  }
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+  // 清理倒计时
+  countdown.cleanup()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -388,7 +431,7 @@ function goBack() {
   max-width: 500px;
   width: 100%;
   @include mobile {
-    padding:$spacing-lg;
+    padding: $spacing-lg;
   }
 
   h2 {
@@ -420,8 +463,8 @@ function goBack() {
     color: $text-primary;
     font-weight: $font-medium;
     transition: all $transition-base;
-     @include mobile {
-      padding:$spacing-sm;
+    @include mobile {
+      padding: $spacing-sm;
     }
 
     &.active {
@@ -475,24 +518,26 @@ function goBack() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc($spacing-lg + 60px) $spacing-lg $spacing-lg;
-  gap: $spacing-lg;
-  overflow-y: auto;
-  @include custom-scrollbar;
+  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  gap: $spacing-sm;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
 }
 
 .rules-display {
   @include glass-card;
-  padding: $spacing-lg;
+  padding: $spacing-md;
   text-align: center;
+  flex-shrink: 0;
 
   h3 {
-    font-size: $font-base;
-    margin-bottom: $spacing-sm;
+    font-size: $font-sm;
+    margin-bottom: $spacing-xs;
   }
 
   p {
-    font-size: $font-lg;
+    font-size: $font-base;
     color: $text-secondary;
 
     strong {
@@ -505,16 +550,16 @@ function goBack() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-sm;
-  margin-bottom: $spacing-lg;
+  gap: $spacing-xs;
+  flex-shrink: 0;
 
   .progress-text {
-    font-size: $font-base;
+    font-size: $font-sm;
     color: $text-secondary;
   }
 
   .remaining-time {
-    font-size: clamp(2rem, 8vw, 3rem);
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
     font-weight: $font-bold;
     color: $accent-primary;
     letter-spacing: 1px;
@@ -524,32 +569,38 @@ function goBack() {
 .item-display {
   flex: 1;
   @include flex-center;
+  transition: opacity 0.3s ease;
+  min-height: 0;
+
+  &.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
 
   .item-card {
     @include glass-card;
-    padding: $spacing-3xl;
+    padding: $spacing-xl;
     text-align: center;
-    min-width: 240px;
-      width: 100%;
+    max-width: 400px;
+    width: 100%;
 
-      @include mobile {
-        padding: $spacing-xl;
-        min-width: 0;
-      }
+    @include mobile {
+      padding: $spacing-lg;
+    }
 
     .item-icon {
-      font-size: clamp(3rem, 10vw, 5rem);
-      margin-bottom: $spacing-lg;
+      font-size: clamp(2.5rem, 8vw, 4rem);
+      margin-bottom: $spacing-md;
     }
 
     .item-name {
-      font-size: $font-2xl;
+      font-size: clamp($font-lg, 4vw, $font-2xl);
       font-weight: $font-bold;
       margin-bottom: $spacing-sm;
     }
 
     .item-price {
-      font-size: $font-lg;
+      font-size: $font-base;
       color: $accent-warning;
     }
   }
@@ -558,23 +609,33 @@ function goBack() {
 .answer-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-md;
-  width: 100%; box-sizing: border-box;
+  gap: $spacing-sm;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0 $spacing-md;
+  transition: opacity 0.3s ease;
+  flex-shrink: 0;
 
-  
+  &.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
   .option-button {
     @include button-reset;
     @include glass-card;
     @include click-feedback;
-    padding: $spacing-lg;
-    font-size: $font-lg;
+    padding: clamp($spacing-md, 3vh, $spacing-xl);
+    font-size: clamp($font-sm, 2.5vw, $font-lg);
     font-weight: $font-medium;
     transition: all $transition-base;
 
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.1);
-      transform: translateY(-2px);
+    // 只在桌面端启用 hover 效果
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+      }
     }
 
     &:disabled {
@@ -589,91 +650,6 @@ function goBack() {
     &.wrong {
       background: rgba(255, 51, 102, 0.2);
       border-color: $accent-error;
-    }
-  }
-}
-
-.result-icon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto $spacing-lg;
-  border-radius: $radius-full;
-  @include flex-center;
-
-  &.success {
-    background: rgba(0, 255, 136, 0.2);
-    color: $accent-success;
-  }
-
-  &.partial {
-    background: rgba(255, 170, 0, 0.2);
-    color: $accent-warning;
-  }
-}
-
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-md;
-  margin: $spacing-xl 0;
-
-  .stat {
-    text-align: center;
-
-    .stat-label {
-      display: block;
-      font-size: $font-sm;
-      color: $text-secondary;
-      margin-bottom: $spacing-xs;
-    }
-
-    .stat-value {
-      display: block;
-      font-size: $font-xl;
-      font-weight: $font-bold;
-      color: $accent-primary;
-    }
-  }
-}
-
-.result-actions {
-  display: flex;
-  gap: $spacing-sm;
-
-  button {
-    @include button-reset;
-    @include click-feedback;
-    flex: 1;
-    padding: $spacing-md $spacing-lg;
-    border-radius: $radius-md;
-    font-weight: $font-medium;
-    font-size: $font-sm;
-    white-space: nowrap;
-    transition: all $transition-base;
-
-    @include mobile {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-    }
-  }
-
-  .secondary-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: $text-primary;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-  }
-
-  .primary-button {
-    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-    color: $text-primary;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
     }
   }
 }

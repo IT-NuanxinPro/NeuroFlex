@@ -4,39 +4,55 @@
       <svg :width="iconSize - 8" :height="iconSize - 8" viewBox="0 0 512 512">
         <defs>
           <linearGradient :id="gradientId" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#7b2cbf;stop-opacity:1" />
+            <stop offset="0%" style="stop-color: #00d4ff; stop-opacity: 1" />
+            <stop offset="100%" style="stop-color: #7b2cbf; stop-opacity: 1" />
           </linearGradient>
         </defs>
         <!-- 神经网络节点 -->
-        <circle cx="140" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
-        <circle cx="140" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
-        <circle cx="140" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
-        <circle cx="256" cy="120" r="24" :fill="`url(#${gradientId})`"/>
-        <circle cx="256" cy="220" r="24" :fill="`url(#${gradientId})`"/>
-        <circle cx="256" cy="292" r="24" :fill="`url(#${gradientId})`"/>
-        <circle cx="256" cy="392" r="24" :fill="`url(#${gradientId})`"/>
-        <circle cx="372" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
-        <circle cx="372" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
-        <circle cx="372" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8"/>
+        <circle cx="140" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
+        <circle cx="140" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
+        <circle cx="140" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
+        <circle cx="256" cy="120" r="24" :fill="`url(#${gradientId})`" />
+        <circle cx="256" cy="220" r="24" :fill="`url(#${gradientId})`" />
+        <circle cx="256" cy="292" r="24" :fill="`url(#${gradientId})`" />
+        <circle cx="256" cy="392" r="24" :fill="`url(#${gradientId})`" />
+        <circle cx="372" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
+        <circle cx="372" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
+        <circle cx="372" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
         <!-- 连接线 -->
         <g :stroke="`url(#${gradientId})`" stroke-width="3" opacity="0.4" fill="none">
-          <line x1="160" y1="160" x2="232" y2="120"/>
-          <line x1="160" y1="160" x2="232" y2="220"/>
-          <line x1="160" y1="256" x2="232" y2="220"/>
-          <line x1="160" y1="256" x2="232" y2="292"/>
-          <line x1="160" y1="352" x2="232" y2="292"/>
-          <line x1="160" y1="352" x2="232" y2="392"/>
-          <line x1="280" y1="120" x2="352" y2="160"/>
-          <line x1="280" y1="220" x2="352" y2="160"/>
-          <line x1="280" y1="220" x2="352" y2="256"/>
-          <line x1="280" y1="292" x2="352" y2="256"/>
-          <line x1="280" y1="292" x2="352" y2="352"/>
-          <line x1="280" y1="392" x2="352" y2="352"/>
+          <line x1="160" y1="160" x2="232" y2="120" />
+          <line x1="160" y1="160" x2="232" y2="220" />
+          <line x1="160" y1="256" x2="232" y2="220" />
+          <line x1="160" y1="256" x2="232" y2="292" />
+          <line x1="160" y1="352" x2="232" y2="292" />
+          <line x1="160" y1="352" x2="232" y2="392" />
+          <line x1="280" y1="120" x2="352" y2="160" />
+          <line x1="280" y1="220" x2="352" y2="160" />
+          <line x1="280" y1="220" x2="352" y2="256" />
+          <line x1="280" y1="292" x2="352" y2="256" />
+          <line x1="280" y1="292" x2="352" y2="352" />
+          <line x1="280" y1="392" x2="352" y2="352" />
         </g>
         <!-- 中心脉冲 -->
-        <circle cx="256" cy="256" r="40" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.6"/>
-        <circle cx="256" cy="256" r="60" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.3"/>
+        <circle
+          cx="256"
+          cy="256"
+          r="40"
+          fill="none"
+          stroke="#00d4ff"
+          stroke-width="2"
+          opacity="0.6"
+        />
+        <circle
+          cx="256"
+          cy="256"
+          r="60"
+          fill="none"
+          stroke="#00d4ff"
+          stroke-width="1"
+          opacity="0.3"
+        />
       </svg>
     </div>
     <h1 v-if="showTitle" class="logo-title" :class="titleClass">{{ title }}</h1>
@@ -50,7 +66,7 @@ const props = defineProps({
   size: {
     type: String,
     default: 'medium', // small, medium, large
-    validator: (value) => ['small', 'medium', 'large'].includes(value)
+    validator: value => ['small', 'medium', 'large'].includes(value)
   },
   showTitle: {
     type: Boolean,

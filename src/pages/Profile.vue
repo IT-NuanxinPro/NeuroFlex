@@ -1,10 +1,11 @@
 <template>
   <div class="profile-page">
-    <header class="page-header">
+    <!-- 移动端标题栏 -->
+    <header v-if="!isPC" class="page-header">
       <h1 class="page-title">个人中心</h1>
     </header>
 
-    <main class="page-content">
+    <main class="page-content" :class="{ 'pc-layout': isPC }">
       <!-- 用户信息卡片 -->
       <div class="profile-card">
         <div class="avatar-section">
@@ -83,8 +84,8 @@
     <Modal
       v-model:visible="showEditModal"
       title="编辑资料"
-      confirmText="保存"
-      cancelText="取消"
+      confirm-text="保存"
+      cancel-text="取消"
       @confirm="handleSaveName"
       @cancel="handleCancelEdit"
       @close="handleCancelEdit"
@@ -109,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import Modal from '@/components/Modal.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -121,6 +122,31 @@ const showEditModal = ref(false)
 const editedName = ref(userStore.profile.name)
 const nameInputRef = ref(null)
 const avatarInput = ref(null)
+
+// 检测是否为PC端
+const isPC = ref(false)
+
+function detectPC() {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
+  
+  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
+  console.log('Profile - isPC:', isPC.value, 'width:', window.innerWidth)
+}
+
+function handleResize() {
+  detectPC()
+}
+
+onMounted(() => {
+  detectPC()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 function formatDate(date) {
   const d = new Date(date)
@@ -243,6 +269,11 @@ watch(showEditModal, val => {
 
 .page-header {
   @include safe-area-padding(top);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -262,9 +293,15 @@ watch(showEditModal, val => {
 .page-content {
   flex: 1;
   overflow-y: auto;
-  padding: $spacing-lg;
+  padding: calc($spacing-md + 60px) $spacing-lg $spacing-lg;
   padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
   @include custom-scrollbar;
+  
+  // PC端布局调整
+  &.pc-layout {
+    padding-top: $spacing-lg;
+    padding-bottom: $spacing-lg;
+  }
 }
 
 .profile-card {
@@ -282,7 +319,7 @@ watch(showEditModal, val => {
 
   .avatar-section {
     flex-shrink: 0;
-    
+
     @media (max-width: $breakpoint-sm) {
       display: flex;
       justify-content: center;

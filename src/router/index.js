@@ -23,6 +23,12 @@ const routes = [
         meta: { title: '训练记录', depth: 1 }
       },
       {
+        path: 'leaderboard',
+        name: 'Leaderboard',
+        component: () => import('@/pages/Leaderboard.vue'),
+        meta: { title: '排行榜', depth: 1 }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/pages/Profile.vue'),

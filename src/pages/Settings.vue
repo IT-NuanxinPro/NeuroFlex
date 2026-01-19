@@ -21,8 +21,8 @@
           </div>
           <label class="toggle-switch">
             <input
-              type="checkbox"
               v-model="configStore.appConfig.soundEnabled"
+              type="checkbox"
               @change="saveConfig"
             />
             <span class="toggle-slider"></span>
@@ -36,8 +36,8 @@
           </div>
           <label class="toggle-switch">
             <input
-              type="checkbox"
               v-model="configStore.appConfig.vibrationEnabled"
+              type="checkbox"
               @change="saveConfig"
             />
             <span class="toggle-slider"></span>
@@ -51,8 +51,8 @@
           </div>
           <label class="toggle-switch">
             <input
-              type="checkbox"
               v-model="configStore.appConfig.animationEnabled"
+              type="checkbox"
               @change="saveConfig"
             />
             <span class="toggle-slider"></span>

@@ -29,18 +29,18 @@ export const itemPool = [
   { name: '充电宝', category: '电子产品', price: 100, icon: '🔋' },
   { name: 'U盘', category: '电子产品', price: 50, icon: '💾' },
   { name: '笔记本电脑', category: '电子产品', price: 6000, icon: '💻' },
-  { name: '键盘', category: '电子产品', price: 300, icon: '⌨️' },
+  { name: '键盘', category: '电子产品', price: 300, icon: '⌨️' }
 ]
 
 export const itemCountOptions = [
   { label: '10个', value: '10' },
   { label: '15个', value: '15' },
   { label: '20个', value: '20' },
-  { label: '25个', value: '25' },
+  { label: '25个', value: '25' }
 ]
 
 export const displayTimeOptions = [
   { label: '2.5秒', value: '2500' },
   { label: '2秒', value: '2000' },
-  { label: '1.5秒', value: '1500' },
+  { label: '1.5秒', value: '1500' }
 ]

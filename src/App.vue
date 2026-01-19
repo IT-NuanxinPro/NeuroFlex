@@ -16,10 +16,30 @@ const router = useRouter()
 const route = useRoute()
 const transitionName = ref('none')
 
+// 检测是否为PC端
+const isPC = ref(false)
+
+function detectPC() {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
+  
+  // 如果不是移动设备，且屏幕宽度大于1024px，认为是PC
+  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
+  
+  return isPC.value
+}
+
 // 监听路由变化，根据depth判断动画方向
 watch(
   () => route.path,
   (newPath, oldPath) => {
+    // PC端不使用滑动动画
+    if (detectPC()) {
+      transitionName.value = 'fade'
+      return
+    }
+
     const newRoute = router.resolve(newPath)
     const oldRoute = router.resolve(oldPath)
 
