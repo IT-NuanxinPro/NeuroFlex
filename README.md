@@ -13,8 +13,6 @@
 
 [在线体验](https://neuroflex.061129.xyz) · [功能介绍](#-训练模块) · [快速开始](#-快速开始)
 
-![NeuroFlex Logo](public/favicon.svg)
-
 </div>
 
 ---
