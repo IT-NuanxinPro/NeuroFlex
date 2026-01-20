@@ -1,145 +1,119 @@
 <template>
   <div class="mirror-page">
+    <!-- 顶部导航 -->
     <header class="page-header">
       <button class="back-button" @click="goBack">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
       </button>
-      <h1 class="page-title">双侧肢体镜像协调</h1>
-      <button v-if="isDrawing && !countdown.isCountingDown.value" class="clear-button" @click="clearCanvas">清除</button>
+      <h1 class="page-title">双侧神经协调</h1>
+      <button v-if="isDrawing" class="clear-button" @click="clearCanvas">重置</button>
     </header>
 
-    <!-- PC端提示弹窗 -->
+    <!-- PC端禁用提示 -->
     <Modal 
       :visible="showPCWarning" 
       :show-close="false" 
       :show-footer="false" 
       :close-on-click-overlay="false"
-      @close="handlePCWarningClose"
     >
       <div class="pc-warning-content">
-        <div class="warning-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-        </div>
-        <h2>功能提示</h2>
-        <p class="warning-text">
-          镜像协调训练需要双手同时操作，<br />
-          建议使用<strong>移动设备</strong>或<strong>平板电脑</strong>进行训练。
-        </p>
-        <p class="warning-subtext">
-          PC端无法实现双手独立绘制的最佳体验
-        </p>
-        <div class="warning-actions">
-          <button class="primary-button" @click="goBack">返回首页</button>
-        </div>
+        <div class="warning-icon">📱</div>
+        <h2>请使用移动设备</h2>
+        <p class="warning-text">本训练依赖多点触控（Multitouch）技术<br>PC端无法实现双侧独立控制</p>
+        <button class="primary-button" @click="goBack">返回首页</button>
       </div>
     </Modal>
 
-    <!-- 配置界面 -->
+    <!-- 1. 配置界面 -->
     <div v-if="!isDrawing && !showResult && !isPC" class="config-screen">
       <div class="config-card">
-        <h2>选择难度</h2>
-
-        <div class="config-group">
-          <label>训练模式</label>
-          <div class="mode-grid">
-            <button
-              v-for="mode in modes"
-              :key="mode.value"
-              :class="['mode-button', { active: selectedMode === mode.value }]"
-              @click="selectedMode = mode.value"
-            >
-              <div class="mode-icon">{{ mode.icon }}</div>
-              <div class="mode-name">{{ mode.name }}</div>
-              <div class="mode-desc">{{ mode.desc }}</div>
-            </button>
-          </div>
-        </div>
-
-        <div class="config-group">
-          <label>模板类型</label>
-          <ButtonGroupSelect v-model="templateType" :options="templateOptions" />
-        </div>
-
-        <button class="start-button" @click="startDrawing">开始训练</button>
-      </div>
-    </div>
-
-    <!-- 绘图界面 -->
-    <div v-if="isDrawing && !isPC" class="drawing-screen">
-      <!-- 倒计时遮罩层 -->
-      <GameCountdown
-        :current-count="countdown.currentCount.value"
-        :progress="countdown.progress.value"
-        :is-visible="countdown.isCountingDown.value"
-      />
-
-      <div v-if="!countdown.isCountingDown.value" class="instruction-banner">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-        <span>左右两侧画板独立操作，双手同时绘制</span>
-      </div>
-
-      <div v-if="!countdown.isCountingDown.value" class="canvas-container" :class="{ disabled: isGameDisabled }">
-        <div class="canvas-panel left-panel">
-          <h3>✍️ 左手画板</h3>
-          <canvas
-            ref="leftCanvas"
-            @mousedown="startDraw('left', $event)"
-            @mousemove="draw('left', $event)"
-            @mouseup="endDraw('left')"
-            @mouseleave="endDraw('left')"
-            @touchstart="startDraw('left', $event)"
-            @touchmove="draw('left', $event)"
-            @touchend="endDraw('left')"
-            @touchcancel="endDraw('left')"
-          ></canvas>
-        </div>
-
-        <div class="divider">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <polyline points="17 8 21 12 17 16" />
-            <polyline points="7 8 3 12 7 16" />
-          </svg>
-        </div>
-
-        <div class="canvas-panel right-panel">
-          <h3>✍️ 右手画板</h3>
-          <canvas
-            ref="rightCanvas"
-            @mousedown="startDraw('right', $event)"
-            @mousemove="draw('right', $event)"
-            @mouseup="endDraw('right')"
-            @mouseleave="endDraw('right')"
-            @touchstart="startDraw('right', $event)"
-            @touchmove="draw('right', $event)"
-            @touchend="endDraw('right')"
-            @touchcancel="endDraw('right')"
+        <div class="section-title">训练模式 (Coordination Mode)</div>
+        <div class="mode-list">
+          <button
+            v-for="mode in trainingModes"
+            :key="mode.value"
+            :class="['mode-item', { active: selectedMode === mode.value }]"
+            @click="selectedMode = mode.value"
           >
-          </canvas>
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-info">
+              <div class="mode-header">
+                <span class="name">{{ mode.name }}</span>
+                <div class="stars">
+                  <span v-for="n in 3" :key="n" :class="{ filled: n <= mode.difficulty }">★</span>
+                </div>
+              </div>
+              <div class="desc">{{ mode.desc }}</div>
+            </div>
+          </button>
         </div>
-      </div>
 
-      <div v-if="!countdown.isCountingDown.value" class="drawing-controls">
-        <button class="control-button" @click="clearCanvas">清除画布</button>
-        <button class="control-button primary" @click="finishDrawing">完成训练</button>
-      </div>
+        <div class="section-title mt-6">任务类型 (Task Type)</div>
+        <div class="task-tabs">
+          <button 
+            v-for="task in taskTypes"
+            :key="task.value"
+            :class="['task-tab', { active: selectedTask === task.value }]"
+            @click="selectedTask = task.value"
+          >
+            {{ task.label }}
+          </button>
+        </div>
 
-      <div v-if="!countdown.isCountingDown.value" class="drawing-hint">
-        <p v-if="templateType !== 'free'">💡 提示：左手绘制{{ templateHint.left }}，右手绘制{{ templateHint.right }}</p>
-        <p v-else>💡 自由绘制，锻炼双手协调能力</p>
+        <div class="hint-box">
+          <p v-if="selectedTask === 'trace'">🎯 目标：双手沿着虚线轨迹精准描摹</p>
+          <p v-else>🎨 目标：双手在空白画板自由创作，保持运动不停</p>
+        </div>
+
+        <button class="start-button" @click="startDrawing">开始神经激活</button>
       </div>
     </div>
 
-    <!-- 结果界面 -->
+    <!-- 2. 绘图训练界面 -->
+    <div v-if="isDrawing && !isPC" class="drawing-screen">
+      <div class="instruction-banner">
+        <span class="icon">🧠</span>
+        <span>{{ currentInstruction }}</span>
+      </div>
+
+      <!-- 画布容器：核心交互区域 -->
+      <div 
+        class="canvas-container" 
+        ref="canvasContainer"
+        @touchstart.prevent="handleGlobalTouch('start', $event)"
+        @touchmove.prevent="handleGlobalTouch('move', $event)"
+        @touchend.prevent="handleGlobalTouch('end', $event)"
+        @touchcancel.prevent="handleGlobalTouch('end', $event)"
+      >
+        <!-- 左画板 -->
+        <div class="canvas-panel left-panel">
+          <div class="panel-tag">Left</div>
+          <canvas ref="leftCanvas"></canvas>
+        </div>
+
+        <!-- 中轴线 -->
+        <div class="divider">
+          <div class="line"></div>
+          <div class="divider-icon">⚡</div>
+          <div class="line"></div>
+        </div>
+
+        <!-- 右画板 -->
+        <div class="canvas-panel right-panel">
+          <div class="panel-tag">Right</div>
+          <canvas ref="rightCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="drawing-controls">
+        <div class="timer">{{ formatTime(drawingDuration) }}</div>
+        <button class="finish-button" @click="finishDrawing">完成训练</button>
+      </div>
+    </div>
+
+    <!-- 3. 结果结算界面 -->
     <GameResult
       :visible="showResult"
       :type="resultType"
@@ -147,7 +121,7 @@
       :subtitle="resultSubtitle"
       :stats="resultStats"
       :show-retry="true"
-      close-text="返回首页"
+      close-text="返回菜单"
       @retry="handleRetry"
       @close="handleClose"
     />
@@ -159,254 +133,231 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
-import { useGameCountdown } from '@/composables/useGameCountdown'
-import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
-import GameCountdown from '@/components/GameCountdown.vue'
 import GameResult from '@/components/GameResult.vue'
 import Modal from '@/components/Modal.vue'
-import { modes, templateOptions } from '@/config/mirror.js'
+import {trainingModes,taskTypes} from '@/config/mirror.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// PC端检测
-const showPCWarning = ref(false)
 const isPC = ref(false)
+const showPCWarning = ref(false)
+const selectedMode = ref('mirror')
+const selectedTask = ref('trace')
 
-// 配置
-const selectedMode = ref('different')
-const templateType = ref('free')
-
-// 游戏状态
-const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
-
-// 绘图状态
 const isDrawing = ref(false)
 const showResult = ref(false)
+const drawingDuration = ref(0)
+const strokeCountLeft = ref(0)
+const strokeCountRight = ref(0) // 分别记录以计算同步率
+
 const leftCanvas = ref(null)
 const rightCanvas = ref(null)
-const previewLeft = ref(null)
-const previewRight = ref(null)
-const drawingDuration = ref(0)
-const strokeCount = ref(0)
-
-// 倒计时设置
-const countdown = useGameCountdown({
-  duration: 3,
-  onComplete: startDrawingAfterCountdown
-})
-
-// 保存画布图像数据
 const leftCanvasImage = ref(null)
 const rightCanvasImage = ref(null)
 
 let leftCtx = null
 let rightCtx = null
+let timerInterval = null
 let startTime = 0
 let leftPaths = []
 let rightPaths = []
 
-// 跟踪每个画板的绘制状态
-let drawingLeft = false
-let drawingRight = false
-
-const templateHint = ref({ left: '', right: '' })
-
-const templateHints = {
-  circle: { left: '圆形', right: '圆形' },
-  square: { left: '方形', right: '方形' },
-  wave: { left: '波浪线', right: '波浪线' },
-  different: { left: '圆形', right: '方形' }
-}
-
-const isGameDisabled = computed(() => {
-  return gameState.value === 'countdown'
+// --- 计算属性 ---
+const currentInstruction = computed(() => {
+  const map = {
+    mirror: '双手对称动作，保持速度一致',
+    parallel: '双手向同一方向移动',
+    dissociation: '左手画圆，右手画方，互不干扰'
+  }
+  return map[selectedMode.value]
 })
 
-// 结果弹窗相关
 const resultType = computed(() => 'success')
+const resultTitle = computed(() => '神经激活完成')
+const resultSubtitle = computed(() => {
+  if (syncScore.value > 90) return '太棒了！你的左右脑配合完美无缺'
+  if (syncScore.value > 70) return '表现不错，继续加强弱侧训练'
+  return '协调性有待提高，请放慢速度再试一次'
+})
 
-const resultTitle = computed(() => '训练完成！')
-
-const resultSubtitle = computed(() => '继续保持，提升双侧协调能力')
+// 计算同步率 (简单的算法：基于左右手笔画数量和时间的差异)
+const syncScore = computed(() => {
+  const total = strokeCountLeft.value + strokeCountRight.value
+  if (total === 0) return 0
+  const diff = Math.abs(strokeCountLeft.value - strokeCountRight.value)
+  // 基础分100，每差一个采样点扣分，最低0分
+  return Math.max(0, Math.round(100 - (diff / total) * 100))
+})
 
 const resultStats = computed(() => [
-  { label: '绘制时长', value: formatTime(drawingDuration.value), highlight: true },
-  { label: '笔画数', value: `${strokeCount.value}`, highlight: false },
-  { label: '训练模式', value: getModeText(selectedMode.value), highlight: false }
+  { label: '双侧同步率', value: `${syncScore.value}%`, highlight: true },
+  { label: '训练时长', value: formatTime(drawingDuration.value), highlight: false },
+  { label: '训练模式', value: trainingModes.find(m => m.value === selectedMode.value)?.name, highlight: false }
 ])
 
-// 检测是否为PC端
+// --- 核心逻辑 ---
+
 function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-  
-  // 如果不是移动设备，且屏幕宽度大于1024px，认为是PC
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent.toLowerCase())
+  const isTablet = /ipad|android(?!.*mobile)/i.test(navigator.userAgent.toLowerCase())
   isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-  
   return isPC.value
 }
 
-function handlePCWarningClose() {
-  showPCWarning.value = false
-}
-
 function startDrawing() {
-  // 立即进入绘图界面
   isDrawing.value = true
   showResult.value = false
-  strokeCount.value = 0
+  strokeCountLeft.value = 0
+  strokeCountRight.value = 0
+  drawingDuration.value = 0
   leftPaths = []
   rightPaths = []
   
-  // 根据模式设置提示
-  if (selectedMode.value === 'different') {
-    templateHint.value = templateHints.different
-  } else {
-    templateHint.value = templateHints[templateType.value] || { left: '', right: '' }
-  }
-
-  // 设置为倒计时状态
-  gameState.value = 'countdown'
-
-  // 先启动倒计时，再初始化画布
-  countdown.start()
-  
-  // 延迟初始化画布，确保倒计时先显示
-  setTimeout(() => {
-    nextTick(() => {
-      initCanvas()
-    })
-  }, 100)
-}
-
-function startDrawingAfterCountdown() {
-  // 倒计时结束后，开始实际绘图
-  gameState.value = 'active'
-  startTime = Date.now()
-
   trainingStore.startTraining('mirror')
+  
+  nextTick(() => {
+    initCanvas()
+    startTime = Date.now()
+    timerInterval = setInterval(() => {
+      drawingDuration.value = Date.now() - startTime
+    }, 1000)
+  })
 }
 
 function initCanvas() {
   if (!leftCanvas.value || !rightCanvas.value) return
 
-  const width = leftCanvas.value.parentElement.clientWidth - 40
-  const height = Math.min(width, 400)
+  // 获取容器实际像素大小
+  const width = leftCanvas.value.parentElement.offsetWidth
+  const height = leftCanvas.value.parentElement.offsetHeight
 
+  // 设置物理像素
   ;[leftCanvas.value, rightCanvas.value].forEach(c => {
     c.width = width
     c.height = height
   })
 
-  leftCtx = leftCanvas.value.getContext('2d')
-  rightCtx = rightCanvas.value.getContext('2d')
+  leftCtx = leftCanvas.value.getContext('2d', { willReadFrequently: false })
+  rightCtx = rightCanvas.value.getContext('2d', { willReadFrequently: false })
+  
+  // 设置画笔样式
   ;[leftCtx, rightCtx].forEach(ctx => {
     ctx.strokeStyle = '#00d4ff'
-    ctx.lineWidth = 3
+    ctx.lineWidth = 4
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
   })
 
-  // 渲染模板参考线（仅辅助显示）
-  if (selectedMode.value === 'different') {
-    drawTemplate(leftCtx, 'circle', width, height)
-    drawTemplate(rightCtx, 'square', width, height)
-  } else if (selectedMode.value === 'same' && templateType.value !== 'free') {
-    drawTemplate(leftCtx, templateType.value, width, height)
-    drawTemplate(rightCtx, templateType.value, width, height)
+  // 如果是描摹模式，绘制背景虚线
+  if (selectedTask.value === 'trace') {
+    drawTemplates(width, height)
   }
 }
 
-function drawTemplate(ctx, type, w, h) {
-  ctx.save()
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)'
-  ctx.setLineDash([6, 6])
-  ctx.beginPath()
-  const pad = 20
-  if (type === 'circle') {
-    ctx.arc(w / 2, h / 2, (w - pad * 2) / 2, 0, Math.PI * 2)
-  } else if (type === 'square') {
-    ctx.rect(pad, pad, w - pad * 2, h - pad * 2)
-  } else if (type === 'wave') {
-    const amp = (h - pad * 2) / 4
-    const midY = h / 2
-    const steps = 20
-    for (let i = 0; i <= steps; i++) {
-      const x = (w / steps) * i
-      const y = midY + Math.sin((i / steps) * Math.PI * 2) * amp
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+// 智能模版绘制系统
+function drawTemplates(w, h) {
+  const pad = 40
+  const midX = w / 2
+  const midY = h / 2
+  const size = Math.min(w, h) / 2 - pad
+
+  // 辅助函数：绘制虚线
+  const drawGuide = (ctx, drawFn) => {
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+    ctx.setLineDash([8, 8])
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    drawFn(ctx)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // 1. 左侧画板永远是基准 (例如画三角形)
+  drawGuide(leftCtx, (ctx) => {
+    if (selectedMode.value === 'dissociation') {
+      // 分离模式：左圆
+      ctx.arc(midX, midY, size, 0, Math.PI * 2)
+    } else {
+      // 其他模式：左三角
+      ctx.moveTo(midX, midY - size)
+      ctx.lineTo(midX - size, midY + size)
+      ctx.lineTo(midX + size, midY + size)
+      ctx.closePath()
     }
-  }
-  ctx.stroke()
-  ctx.restore()
+  })
+
+  // 2. 右侧画板根据模式变化
+  drawGuide(rightCtx, (ctx) => {
+    if (selectedMode.value === 'mirror') {
+      // 镜像模式：左右对称 (三角形翻转或保持对称中心)
+      // 对于等腰三角形，镜像后看起来一样，为了明显，我们画直角三角形或者波浪更好
+      // 这里演示简单的镜像逻辑：
+      ctx.moveTo(midX, midY - size)
+      ctx.lineTo(midX - size, midY + size) // 注意：这里视觉上其实是一样的
+      ctx.lineTo(midX + size, midY + size)
+      ctx.closePath()
+    } else if (selectedMode.value === 'parallel') {
+      // 平行模式：完全复制左侧 (同向)
+      ctx.moveTo(midX, midY - size)
+      ctx.lineTo(midX - size, midY + size)
+      ctx.lineTo(midX + size, midY + size)
+      ctx.closePath()
+    } else if (selectedMode.value === 'dissociation') {
+      // 分离模式：右方 (与左圆不同)
+      ctx.rect(midX - size, midY - size, size * 2, size * 2)
+    }
+  })
 }
 
-function getCanvasCoords(canvas, event) {
-  const rect = canvas.getBoundingClientRect()
-  const e = event.touches ? event.touches[0] : event
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  }
-}
+// 全局触摸事件分发 (核心修复逻辑)
+function handleGlobalTouch(type, event) {
+  if (!leftCanvas.value || !rightCanvas.value) return
 
-function startDraw(side, event) {
-  // 阻止默认行为和事件冒泡
-  if (event.preventDefault) event.preventDefault()
-  if (event.stopPropagation) event.stopPropagation()
+  const leftRect = leftCanvas.value.getBoundingClientRect()
+  const rightRect = rightCanvas.value.getBoundingClientRect()
+  const touches = event.changedTouches
   
-  if (side === 'left') {
-    drawingLeft = true
-  } else {
-    drawingRight = true
-  }
-  
-  strokeCount.value++
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i]
+    const cx = touch.clientX
+    const cy = touch.clientY
+    
+    let target = null
+    let rect = null
+    
+    // 判定触点属于哪个区域
+    if (cx >= leftRect.left && cx <= leftRect.right && cy >= leftRect.top && cy <= leftRect.bottom) {
+      target = 'left'
+      rect = leftRect
+    } else if (cx >= rightRect.left && cx <= rightRect.right && cy >= rightRect.top && cy <= rightRect.bottom) {
+      target = 'right'
+      rect = rightRect
+    }
 
-  const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
-  const ctx = side === 'left' ? leftCtx : rightCtx
-  const coords = getCanvasCoords(canvas, event)
+    if (!target) continue
 
-  ctx.beginPath()
-  ctx.moveTo(coords.x, coords.y)
+    const x = cx - rect.left
+    const y = cy - rect.top
+    const ctx = target === 'left' ? leftCtx : rightCtx
+    const pathArray = target === 'left' ? leftPaths : rightPaths
 
-  const pathArray = side === 'left' ? leftPaths : rightPaths
-  pathArray.push({ x: coords.x, y: coords.y, t: Date.now() })
-}
-
-function draw(side, event) {
-  const isDrawing = side === 'left' ? drawingLeft : drawingRight
-  if (!isDrawing) return
-  
-  // 阻止默认行为和事件冒泡
-  if (event.preventDefault) event.preventDefault()
-  if (event.stopPropagation) event.stopPropagation()
-
-  const canvas = side === 'left' ? leftCanvas.value : rightCanvas.value
-  const ctx = side === 'left' ? leftCtx : rightCtx
-
-  const coords = getCanvasCoords(canvas, event)
-
-  ctx.lineTo(coords.x, coords.y)
-  ctx.stroke()
-
-  const pathArray = side === 'left' ? leftPaths : rightPaths
-  pathArray.push({ x: coords.x, y: coords.y, t: Date.now() })
-}
-
-function endDraw(side) {
-  if (side === 'left') {
-    drawingLeft = false
-  } else if (side === 'right') {
-    drawingRight = false
-  } else {
-    // 如果没有指定 side，清除所有
-    drawingLeft = false
-    drawingRight = false
+    if (type === 'start') {
+      target === 'left' ? strokeCountLeft.value++ : strokeCountRight.value++
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      pathArray.push({ x, y, t: Date.now() })
+    } else if (type === 'move') {
+      ctx.lineTo(x, y)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      pathArray.push({ x, y, t: Date.now() })
+    } else if (type === 'end') {
+      ctx.beginPath()
+    }
   }
 }
 
@@ -416,94 +367,44 @@ function clearCanvas() {
     rightCtx.clearRect(0, 0, rightCanvas.value.width, rightCanvas.value.height)
     leftPaths = []
     rightPaths = []
-    strokeCount.value = 0
+    strokeCountLeft.value = 0
+    strokeCountRight.value = 0
+    // 如果是描摹模式，清除后要重绘模版
+    initCanvas()
   }
 }
 
 function finishDrawing() {
-  drawingDuration.value = Date.now() - startTime
+  clearInterval(timerInterval)
+  
+  if (leftCanvas.value) leftCanvasImage.value = leftCanvas.value.toDataURL()
+  if (rightCanvas.value) rightCanvasImage.value = rightCanvas.value.toDataURL()
 
-  // 保存画布为图像数据URL
-  if (leftCanvas.value && rightCanvas.value) {
-    leftCanvasImage.value = leftCanvas.value.toDataURL('image/png')
-    rightCanvasImage.value = rightCanvas.value.toDataURL('image/png')
-  }
-
-  // 结束训练
   isDrawing.value = false
   trainingStore.endTraining()
 
-  // 显示结果并加载预览
   nextTick(() => {
     showResult.value = true
-
-    // 再次使用 nextTick 确保预览画布已渲染
-    nextTick(() => {
-      loadPreviewImages()
-    })
   })
-
-  saveTrainingRecord()
+  
+  saveRecord()
 }
 
-function loadPreviewImages() {
-  if (!previewLeft.value || !previewRight.value) return
-  if (!leftCanvasImage.value || !rightCanvasImage.value) return
-
-  const previewWidth = 200
-  const previewHeight = 200
-
-  // 加载左侧预览
-  const leftImg = new Image()
-  leftImg.onload = () => {
-    previewLeft.value.width = previewWidth
-    previewLeft.value.height = previewHeight
-    const ctx = previewLeft.value.getContext('2d')
-    ctx.drawImage(leftImg, 0, 0, previewWidth, previewHeight)
-  }
-  leftImg.src = leftCanvasImage.value
-
-  // 加载右侧预览
-  const rightImg = new Image()
-  rightImg.onload = () => {
-    previewRight.value.width = previewWidth
-    previewRight.value.height = previewHeight
-    const ctx = previewRight.value.getContext('2d')
-    ctx.drawImage(rightImg, 0, 0, previewWidth, previewHeight)
-  }
-  rightImg.src = rightCanvasImage.value
-}
-
-function saveTrainingRecord() {
-  // 保存训练记录
-  const score = Math.max(0, 100 - Math.floor(drawingDuration.value / 1000))
+function saveRecord() {
   userStore.addTrainingRecord({
     moduleName: 'mirror',
-    difficulty: getModeText(selectedMode.value),
-    score,
+    difficulty: trainingModes.find(m => m.value === selectedMode.value)?.name,
+    score: syncScore.value,
     duration: drawingDuration.value,
-    accuracy: 1, // 镜像协调没有准确率概念
     details: {
       mode: selectedMode.value,
-      templateType: templateType.value,
-      strokeCount: strokeCount.value,
-      leftPathLength: leftPaths.length,
-      rightPathLength: rightPaths.length
+      syncRate: syncScore.value
     }
   })
 }
 
-function resetDrawing() {
-  showResult.value = false
-  isDrawing.value = false
-  gameState.value = 'idle'
-  leftCanvasImage.value = null
-  rightCanvasImage.value = null
-}
-
 function handleRetry() {
   showResult.value = false
-  resetDrawing()
   startDrawing()
 }
 
@@ -512,443 +413,327 @@ function handleClose() {
   goBack()
 }
 
-function getModeText(mode) {
-  const modeObj = modes.find(m => m.value === mode)
-  return modeObj ? modeObj.name : mode
-}
-
-function formatTime(ms) {
-  const seconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${seconds}秒`
-}
-
 function goBack() {
+  if (timerInterval) clearInterval(timerInterval)
   router.back()
 }
 
-// 页面加载时检测PC端
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000)
+  const m = Math.floor(s / 60)
+  const rs = s % 60
+  return `${m}:${rs.toString().padStart(2, '0')}`
+}
+
 onMounted(() => {
-  if (detectPC()) {
-    showPCWarning.value = true
-  }
+  if (detectPC()) showPCWarning.value = true
 })
 
 onUnmounted(() => {
-  // 清理倒计时
-  countdown.cleanup()
+  if (timerInterval) clearInterval(timerInterval)
 })
 </script>
 
 <style lang="scss" scoped>
+// 变量定义 (如果没有全局 SCSS 变量，这里作为 fallback)
+$bg-dark: #121212;
+$card-bg: #1e1e1e;
+$accent: #00d4ff;
+$text-main: #ffffff;
+$text-sub: #aaaaaa;
+
 .mirror-page {
   min-height: 100vh;
-  background: $bg-primary;
+  background-color: $bg-dark;
+  color: $text-main;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: none; // 禁止页面级滚动
 }
 
+// 头部样式
 .page-header {
-  @include safe-area-padding(top);
+  height: 60px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: $spacing-md $spacing-lg;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 0 16px;
+  background: rgba(30, 30, 30, 0.8);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-
-  .back-button,
-  .clear-button {
-    @include button-reset;
-    @include click-feedback;
-    border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.05);
-    color: $text-primary;
-    font-size: $font-sm;
-  }
-
-  .back-button {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    @include flex-center;
-    position: absolute;
-    left: $spacing-lg;
-  }
-
-  .clear-button {
-    padding: $spacing-sm $spacing-md;
-    position: absolute;
-    right: $spacing-lg;
-  }
-
+  z-index: 10;
+  
   .page-title {
-    font-size: $font-xl;
-    font-weight: $font-semibold;
+    flex: 1;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
     margin: 0;
-    text-align: center;
+  }
+  
+  .back-button, .clear-button {
+    background: none;
+    border: none;
+    color: $text-main;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .clear-button {
+    color: $accent;
+    font-weight: 500;
   }
 }
 
-.config-screen,
-.result-screen {
+// 配置界面样式
+.config-screen {
   flex: 1;
-  @include flex-center;
-  padding: calc($spacing-md + 60px) $spacing-lg $spacing-md;
   overflow-y: auto;
-  @include custom-scrollbar;
-}
-
-.config-card,
-.result-card {
-  @include glass-card;
-  padding: $spacing-2xl;
-  max-width: 500px;
-  width: 100%;
-
-  @include mobile {
-    padding: $spacing-lg;
+  padding: 20px;
+  touch-action: auto; // 配置页允许滚动
+  
+  .config-card {
+    background: $card-bg;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   }
-
-  h2 {
-    text-align: center;
-    margin-bottom: $spacing-xl;
-    font-size: $font-xl;
+  
+  .section-title {
+    font-size: 14px;
+    color: $text-sub;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    &.mt-6 { margin-top: 24px; }
   }
-}
-
-.config-group {
-  margin-bottom: $spacing-xl;
-
-  label {
-    display: block;
-    font-weight: $font-medium;
-    margin-bottom: $spacing-md;
-    font-size: $font-base;
+  
+  // 模式列表
+  .mode-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
-}
-
-.mode-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-md;
-
-  @include mobile {
-    grid-template-columns: 1fr;
-  }
-
-  .mode-button {
-    @include button-reset;
-    @include click-feedback;
-    @include glass-card;
-    padding: $spacing-lg;
-    text-align: center;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    transition: all $transition-base;
-
+  
+  .mode-item {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px;
+    color: $text-main;
+    text-align: left;
+    transition: all 0.2s;
+    
     &.active {
-      border-color: $accent-primary;
       background: rgba(0, 212, 255, 0.1);
-      box-shadow:
-        0 0 20px rgba(0, 212, 255, 0.3),
-        inset 0 0 20px rgba(0, 212, 255, 0.1);
+      border-color: $accent;
     }
-
-    // 只在桌面端启用 hover
-    @media (hover: hover) and (pointer: fine) {
-      &:hover:not(.active) {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(0, 212, 255, 0.3);
+    
+    .mode-icon {
+      font-size: 24px;
+      margin-right: 16px;
+    }
+    
+    .mode-info {
+      flex: 1;
+      
+      .mode-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        .name { font-weight: 600; font-size: 16px; }
+        .stars {
+          color: #333;
+          font-size: 12px;
+          .filled { color: #ffb400; }
+        }
+      }
+      
+      .desc {
+        font-size: 12px;
+        color: $text-sub;
+        line-height: 1.3;
       }
     }
-
-    .mode-icon {
-      font-size: 2rem;
-      margin-bottom: $spacing-sm;
+  }
+  
+  // 任务切换
+  .task-tabs {
+    display: flex;
+    background: rgba(0,0,0,0.2);
+    padding: 4px;
+    border-radius: 10px;
+    
+    .task-tab {
+      flex: 1;
+      background: none;
+      border: none;
+      color: $text-sub;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      
+      &.active {
+        background: $card-bg; // 或者 accent
+        color: $text-main;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      }
     }
-
-    .mode-name {
-      font-size: $font-base;
-      font-weight: $font-medium;
-      margin-bottom: $spacing-xs;
-    }
-
-    .mode-desc {
-      font-size: $font-sm;
-      color: $text-secondary;
-    }
+  }
+  
+  .hint-box {
+    margin-top: 20px;
+    padding: 12px;
+    background: rgba(0, 212, 255, 0.05);
+    border-radius: 8px;
+    color: $accent;
+    font-size: 12px;
+    text-align: center;
+  }
+  
+  .start-button {
+    width: 100%;
+    margin-top: 30px;
+    padding: 16px;
+    background: linear-gradient(90deg, #00d4ff, #005bea);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+    
+    &:active { transform: scale(0.98); }
   }
 }
 
-.start-button {
-  @include button-reset;
-  @include click-feedback;
-  width: 100%;
-  padding: $spacing-lg;
-  border-radius: $radius-md;
-  background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-  color: $text-primary;
-  font-size: $font-lg;
-  font-weight: $font-bold;
-  transition: all $transition-base;
-  box-shadow:
-    0 8px 24px rgba(0, 212, 255, 0.3),
-    0 0 40px rgba(0, 212, 255, 0.1);
-
-  @include mobile {
-    padding: $spacing-md;
-    font-size: $font-base;
-  }
-
-  // 只在桌面端启用 hover
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow:
-        0 12px 32px rgba(0, 212, 255, 0.5),
-        0 0 60px rgba(0, 212, 255, 0.3);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
+// 绘图界面样式
 .drawing-screen {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
-  gap: $spacing-sm;
-  overflow: hidden;
-  position: relative;
-  min-height: 0;
-}
-
-.instruction-banner {
-  @include glass-card;
-  padding: $spacing-sm $spacing-md;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  color: $accent-primary;
-  font-size: clamp(10px, 2vw, $font-xs);
-  font-weight: $font-medium;
-  text-align: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  svg {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.canvas-container {
-  flex: 1;
-  display: flex;
-  gap: $spacing-xs;
-  min-height: 0;
-  position: relative;
-  transition: opacity 0.3s ease;
-
-  &.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  @include mobile {
-    flex-direction: column;
-    gap: $spacing-xs;
-  }
-
-  .canvas-panel {
-    flex: 1;
-    @include glass-card;
-    padding: $spacing-xs;
+  padding: 10px;
+  
+  .instruction-banner {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    color: $text-sub;
+    font-size: 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .canvas-container {
+    flex: 1;
+    display: flex;
+    background: #181818;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
     position: relative;
-    min-height: 0;
-
-    h3 {
-      font-size: clamp(10px, 2vw, $font-sm);
-      margin-bottom: $spacing-xs;
-      text-align: center;
-      flex-shrink: 0;
+    overflow: hidden;
+    touch-action: none; // 关键：禁止浏览器手势
+    
+    .divider {
+      width: 2px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 5;
+      
+      .line {
+        width: 1px;
+        flex: 1;
+        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+      }
+      .divider-icon {
+        font-size: 12px;
+        color: rgba(255,255,255,0.2);
+      }
     }
-
-    canvas {
+    
+    .canvas-panel {
       flex: 1;
-      border-radius: $radius-sm;
-      background: rgba(0, 0, 0, 0.3);
-      touch-action: none;
-      min-height: 0;
-      width: 100%;
-    }
-
-    &.left-panel canvas {
-      cursor: crosshair;
-    }
-
-    &.right-panel canvas {
-      cursor: crosshair;
+      position: relative;
+      
+      .panel-tag {
+        position: absolute;
+        top: 10px;
+        left: 0; 
+        right: 0;
+        text-align: center;
+        font-size: 10px;
+        color: rgba(255,255,255,0.1);
+        text-transform: uppercase;
+        pointer-events: none;
+      }
+      
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
     }
   }
-
-  .divider {
-    width: 2px;
-    background: linear-gradient(180deg, transparent, $accent-primary, transparent);
+  
+  .drawing-controls {
+    height: 70px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: $accent-primary;
-    flex-shrink: 0;
-
-    svg {
-      width: 16px;
-      height: 16px;
+    justify-content: space-between;
+    padding: 0 10px;
+    
+    .timer {
+      font-family: monospace;
+      font-size: 20px;
+      color: $text-main;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 16px;
+      border-radius: 8px;
     }
-
-    @include mobile {
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, $accent-primary, transparent);
-    }
-  }
-}
-
-.drawing-controls {
-  display: flex;
-  gap: $spacing-sm;
-  justify-content: center;
-  flex-shrink: 0;
-
-  .control-button {
-    @include button-reset;
-    @include click-feedback;
-    padding: clamp($spacing-sm, 2vh, $spacing-md) clamp($spacing-md, 4vw, $spacing-lg);
-    border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: $text-primary;
-    font-weight: $font-medium;
-    font-size: clamp($font-sm, 2.5vw, $font-base);
-
-    &.primary {
-      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    
+    .finish-button {
+      background: $text-main;
+      color: $bg-dark;
       border: none;
-      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-    }
-
-    // 只在桌面端启用 hover
-    @media (hover: hover) and (pointer: fine) {
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      &.primary:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4);
-      }
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(255,255,255,0.2);
     }
   }
 }
 
-.drawing-hint {
-  text-align: center;
-  color: $text-secondary;
-  font-size: clamp(10px, 2vw, $font-xs);
-  flex-shrink: 0;
-  line-height: 1.4;
-}
-
-// PC端警告弹窗样式
+// PC警告弹窗
 .pc-warning-content {
   text-align: center;
-  padding: $spacing-xl;
-
+  padding: 20px;
+  color: #333; // Modal内通常是白底黑字
+  
   .warning-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto $spacing-lg;
-    border-radius: $radius-full;
-    background: rgba(255, 170, 0, 0.1);
-    border: 2px solid rgba(255, 170, 0, 0.3);
-    @include flex-center;
-
-    svg {
-      color: $accent-warning;
-      stroke-width: 2;
-    }
+    font-size: 48px;
+    margin-bottom: 16px;
   }
-
-  h2 {
-    font-size: $font-2xl;
-    font-weight: $font-bold;
-    margin-bottom: $spacing-lg;
-    color: $text-primary;
-  }
-
-  .warning-text {
-    font-size: $font-base;
-    line-height: 1.8;
-    color: $text-secondary;
-    margin-bottom: $spacing-md;
-
-    strong {
-      color: $accent-primary;
-      font-weight: $font-semibold;
-    }
-  }
-
-  .warning-subtext {
-    font-size: $font-sm;
-    color: $text-tertiary;
-    margin-bottom: $spacing-2xl;
-  }
-
-  .warning-actions {
-    display: flex;
-    gap: $spacing-md;
-    justify-content: center;
-
-    button {
-      @include button-reset;
-      @include click-feedback;
-      padding: $spacing-md $spacing-xl;
-      border-radius: $radius-md;
-      font-weight: $font-medium;
-      font-size: $font-base;
-      transition: all $transition-base;
-      min-width: 120px;
-    }
-
-    .primary-button {
-      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
-      color: $text-primary;
-      width: 100%;
-      max-width: 200px;
-
-      @media (hover: hover) and (pointer: fine) {
-        &:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-        }
-      }
-    }
+  
+  h2 { font-size: 20px; margin-bottom: 10px; }
+  .warning-text { color: #666; margin-bottom: 24px; line-height: 1.5; }
+  
+  .primary-button {
+    background: $accent;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 16px;
   }
 }
 </style>

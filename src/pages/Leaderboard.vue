@@ -1,11 +1,11 @@
 <template>
   <div class="leaderboard-page">
     <!-- 移动端标题栏 -->
-    <header v-if="!isPC" class="page-header">
+    <header v-if="!isPCDevice" class="page-header">
       <h1 class="page-title">排行榜</h1>
     </header>
 
-    <div class="coming-soon-container" :class="{ 'pc-layout': isPC }">
+    <div class="coming-soon-container" :class="{ 'pc-layout': isPCDevice }">
       <div class="coming-soon-card">
         <div class="icon-wrapper">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -24,25 +24,17 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { isPC } from '@/utils/device'
 
 // 检测是否为PC端
-const isPC = ref(false)
-
-function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  
-  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-  console.log('Leaderboard - isPC:', isPC.value, 'width:', window.innerWidth)
-}
+const isPCDevice = ref(isPC())
 
 function handleResize() {
-  detectPC()
+  isPCDevice.value = isPC()
 }
 
 onMounted(() => {
-  detectPC()
+  isPCDevice.value = isPC()
   window.addEventListener('resize', handleResize)
 })
 
@@ -53,11 +45,11 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .leaderboard-page {
-  min-height: 100vh;
+  height: 100%; // 填满父容器
   background: $bg-primary;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; // 防止滚动条
 }
 
 .page-header {
@@ -85,19 +77,18 @@ onUnmounted(() => {
 }
 
 .coming-soon-container {
-  flex: 1;
+  flex: 1; // 填充剩余空间
   display: flex;
   align-items: center;
   justify-content: center;
   padding: calc($spacing-md + 60px) $spacing-lg $spacing-lg;
   padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
   overflow: hidden;
-  min-height: 0;
+  min-height: 0; // 重要：让flex子元素可以收缩
   
   // PC端布局调整
   &.pc-layout {
-    padding-top: $spacing-lg;
-    padding-bottom: $spacing-lg;
+    padding: $spacing-lg;
   }
 }
 

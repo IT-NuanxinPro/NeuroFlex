@@ -1,6 +1,7 @@
 <template>
   <div class="record-page">
-    <header class="page-header">
+    <!-- 移动端标题栏 -->
+    <header v-if="!isPCDevice" class="page-header">
       <h1 class="page-title">训练记录</h1>
     </header>
 
@@ -32,15 +33,21 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
+import { isPC } from '@/utils/device'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const filterModule = ref('')
+const isPCDevice = ref(isPC())
+
+function handleResize() {
+  isPCDevice.value = isPC()
+}
 
 const moduleOptions = [
   { label: '全部', value: '' },
@@ -112,15 +119,24 @@ function formatDuration(ms) {
 function goHome() {
   router.push('/')
 }
+
+onMounted(() => {
+  isPCDevice.value = isPC()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <style lang="scss" scoped>
 .record-page {
-  height: 100vh;
+  height: 100%; // 填满父容器
   background: $bg-primary;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; // 防止滚动条
 }
 
 .page-header {
@@ -148,11 +164,11 @@ function goHome() {
 }
 
 .page-content {
-  flex: 1;
+  flex: 1; // 填充剩余空间
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0;
+  min-height: 0; // 重要：让flex子元素可以收缩
 }
 
 .empty-state {

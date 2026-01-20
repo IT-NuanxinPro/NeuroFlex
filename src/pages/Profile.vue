@@ -1,11 +1,11 @@
 <template>
   <div class="profile-page">
     <!-- 移动端标题栏 -->
-    <header v-if="!isPC" class="page-header">
+    <header v-if="!isPCDevice" class="page-header">
       <h1 class="page-title">个人中心</h1>
     </header>
 
-    <main class="page-content" :class="{ 'pc-layout': isPC }">
+    <main class="page-content" :class="{ 'pc-layout': isPCDevice }">
       <!-- 用户信息卡片 -->
       <div class="profile-card">
         <div class="avatar-section">
@@ -81,66 +81,86 @@
     </main>
 
     <!-- 编辑资料弹窗 -->
-    <Modal
-      v-model:visible="showEditModal"
-      title="编辑资料"
-      confirm-text="保存"
-      cancel-text="取消"
-      @confirm="handleSaveName"
-      @cancel="handleCancelEdit"
+    <van-popup
+      v-model:show="showEditModal"
+      position="bottom"
+      :style="{ height: '40%' }"
+      round
+      closeable
+      close-icon-position="top-right"
+      :safe-area-inset-bottom="true"
+      :lock-scroll="true"
+      class="keyboard-adaptive"
       @close="handleCancelEdit"
     >
-      <div class="edit-form">
-        <div class="form-group">
-          <label class="form-label">用户名</label>
-          <input
-            ref="nameInputRef"
-            v-model="editedName"
-            type="text"
-            class="form-input"
-            placeholder="请输入用户名"
-            maxlength="20"
-            @keyup.enter="handleSaveName"
-          />
-          <span class="char-count">{{ editedName.length }}/20</span>
+      <div class="edit-popup-content popup-keyboard-safe">
+        <div class="popup-header">
+          <h3 class="popup-title">编辑资料</h3>
+        </div>
+        
+        <div class="popup-body input-keyboard-fix">
+          <van-form @submit="handleSaveName">
+            <van-cell-group inset>
+              <van-field
+                v-model="editedName"
+                name="username"
+                label="用户名"
+                placeholder="请输入用户名"
+                :maxlength="20"
+                show-word-limit
+                class="input-focused"
+                :rules="[{ required: true, message: '请输入用户名' }]"
+                @keyup.enter="handleSaveName"
+              />
+            </van-cell-group>
+            
+            <div class="popup-actions">
+              <van-button 
+                block 
+                type="primary" 
+                native-type="submit"
+                :loading="saving"
+                loading-text="保存中..."
+              >
+                保存
+              </van-button>
+            </div>
+          </van-form>
         </div>
       </div>
-    </Modal>
+    </van-popup>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
-import Modal from '@/components/Modal.vue'
+import { Popup as VanPopup, Form as VanForm, Field as VanField, CellGroup as VanCellGroup, Button as VanButton } from 'vant'
+import 'vant/lib/popup/style'
+import 'vant/lib/form/style'
+import 'vant/lib/field/style'
+import 'vant/lib/cell-group/style'
+import 'vant/lib/button/style'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { downloadData } from '@/utils/storage'
+import { isPC } from '@/utils/device'
 
 const userStore = useUserStore()
 
 const showEditModal = ref(false)
 const editedName = ref(userStore.profile.name)
-const nameInputRef = ref(null)
+const saving = ref(false)
 const avatarInput = ref(null)
 
 // 检测是否为PC端
-const isPC = ref(false)
-
-function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  
-  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-  console.log('Profile - isPC:', isPC.value, 'width:', window.innerWidth)
-}
+const isPCDevice = ref(isPC())
 
 function handleResize() {
-  detectPC()
+  isPCDevice.value = isPC()
 }
 
 onMounted(() => {
-  detectPC()
+  isPCDevice.value = isPC()
   window.addEventListener('resize', handleResize)
 })
 
@@ -158,11 +178,23 @@ function formatMinutes(ms) {
   return `${minutes}分钟`
 }
 
-function handleSaveName() {
-  if (editedName.value.trim()) {
-    userStore.updateProfile({ name: editedName.value.trim() })
-  } else {
+async function handleSaveName() {
+  if (!editedName.value.trim()) {
     return false
+  }
+  
+  saving.value = true
+  
+  try {
+    // 模拟保存延迟，提供更好的用户反馈
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    userStore.updateProfile({ name: editedName.value.trim() })
+    showEditModal.value = false
+  } catch (error) {
+    console.error('保存失败:', error)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -247,24 +279,15 @@ function clearHistory() {
     alert('训练记录已清空')
   }
 }
-
-watch(showEditModal, val => {
-  if (val) {
-    editedName.value = userStore.profile.name
-    nextTick(() => {
-      nameInputRef.value?.focus()
-    })
-  }
-})
 </script>
 
 <style lang="scss" scoped>
 .profile-page {
-  min-height: 100vh;
+  height: 100%; // 填满父容器
   background: $bg-primary;
   display: flex;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom);
+  overflow: hidden; // 防止滚动条
 }
 
 .page-header {
@@ -291,15 +314,16 @@ watch(showEditModal, val => {
 }
 
 .page-content {
-  flex: 1;
+  flex: 1; // 填充剩余空间
   overflow-y: auto;
   padding: calc($spacing-md + 60px) $spacing-lg $spacing-lg;
   padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
   @include custom-scrollbar;
+  min-height: 0; // 重要：让flex子元素可以收缩
   
   // PC端布局调整
   &.pc-layout {
-    padding-top: $spacing-lg;
+    padding: $spacing-lg;
     padding-bottom: $spacing-lg;
   }
 }
@@ -377,34 +401,144 @@ watch(showEditModal, val => {
     font-weight: $font-semibold;
     margin-bottom: $spacing-md;
     color: $text-primary;
+    
+    @include mobile {
+      font-size: $font-base;
+      margin-bottom: $spacing-sm;
+    }
   }
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: $spacing-md;
-
-  @media (max-width: $breakpoint-sm) {
-    grid-template-columns: 1fr;
+  
+  // 移动端和APK环境使用三列方格布局
+  @include mobile {
+    grid-template-columns: repeat(3, 1fr);
+    gap: $spacing-sm;
+  }
+  
+  // PC端也使用三列方格布局
+  @media (min-width: $breakpoint-lg) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: $spacing-lg;
+  }
+  
+  // 超小屏幕适配
+  @media (max-width: 360px) {
+    gap: $spacing-xs;
   }
 }
 
 .stat-item {
   @include glass-card;
   padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
+  transition: all $transition-base;
+  
+  // 所有设备都使用方格布局（上下结构）
+  min-height: 100px;
+  aspect-ratio: 1; // 保持方形
+  
+  // 移动端调整
+  @include mobile {
+    padding: $spacing-md;
+    min-height: 80px;
+    
+    // 超小屏幕进一步压缩
+    @media (max-width: 360px) {
+      padding: $spacing-sm;
+      min-height: 70px;
+    }
+  }
+  
+  // PC端调整
+  @media (min-width: $breakpoint-lg) {
+    padding: $spacing-xl;
+    min-height: 120px;
+  }
+  
+  // 悬停效果（仅桌面端）
+  @include hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 212, 255, 0.2);
+  }
+  
+  // 移动端点击反馈
+  @include mobile {
+    &:active {
+      transform: scale(0.98);
+    }
+  }
 
   .stat-value {
     font-size: $font-2xl;
     font-weight: $font-bold;
     color: $accent-primary;
+    line-height: 1.2;
     margin-bottom: $spacing-xs;
+    
+    // 移动端调整
+    @include mobile {
+      font-size: $font-xl;
+      
+      @media (max-width: 360px) {
+        font-size: $font-lg;
+        margin-bottom: 2px;
+      }
+    }
+    
+    // PC端调整
+    @media (min-width: $breakpoint-lg) {
+      font-size: $font-3xl;
+      margin-bottom: $spacing-sm;
+    }
   }
 
   .stat-label {
     font-size: $font-sm;
     color: $text-secondary;
+    font-weight: $font-medium;
+    line-height: 1.2;
+    white-space: nowrap; // 防止文字换行
+    
+    // 移动端调整
+    @include mobile {
+      font-size: $font-xs;
+      
+      @media (max-width: 360px) {
+        font-size: 11px;
+      }
+    }
+    
+    // PC端调整
+    @media (min-width: $breakpoint-lg) {
+      font-size: $font-base;
+    }
+  }
+}
+
+// APK 环境下的特殊优化
+.android-device .stats-grid,
+.ios-device .stats-grid {
+  .stat-item {
+    // APK 环境下使用更紧凑的布局
+    min-height: 75px;
+    
+    @media (max-width: 360px) {
+      min-height: 65px;
+    }
+    
+    .stat-value {
+      @media (max-width: 360px) {
+        font-size: $font-base;
+      }
+    }
   }
 }
 
@@ -414,16 +548,25 @@ watch(showEditModal, val => {
     font-weight: $font-semibold;
     margin-bottom: $spacing-md;
     color: $text-primary;
+    
+    @include mobile {
+      font-size: $font-base;
+      margin-bottom: $spacing-sm;
+    }
   }
 }
 
 .action-buttons {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
+  
+  // PC端使用原来的两列布局
+  grid-template-columns: repeat(2, 1fr);
 
-  @media (max-width: $breakpoint-sm) {
+  // 移动端改为单列布局，按钮更紧凑
+  @include mobile {
     grid-template-columns: 1fr;
+    gap: $spacing-sm;
   }
 }
 
@@ -442,6 +585,23 @@ watch(showEditModal, val => {
   font-weight: $font-medium;
   transition: all $transition-base;
 
+  // 移动端使用更紧凑的样式
+  @include mobile {
+    padding: $spacing-md $spacing-lg;
+    font-size: $font-sm;
+    
+    // 超小屏幕进一步压缩
+    @media (max-width: 360px) {
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-xs;
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
   &:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: $accent-primary;
@@ -451,6 +611,23 @@ watch(showEditModal, val => {
     &:hover {
       background: rgba(255, 51, 102, 0.1);
       border-color: $accent-error;
+    }
+  }
+  
+  // 移动端禁用悬停效果，使用点击反馈
+  @include mobile {
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    &:active {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(0.98);
+    }
+    
+    &.danger:active {
+      background: rgba(255, 51, 102, 0.1);
     }
   }
 }
@@ -501,5 +678,124 @@ watch(showEditModal, val => {
     transform: translateY(100%);
     pointer-events: none;
   }
+}
+
+// Vant 组件样式覆盖
+:deep(.van-popup) {
+  background: $bg-secondary;
+  border-top-left-radius: $radius-lg;
+  border-top-right-radius: $radius-lg;
+  
+  .van-popup__close-icon {
+    color: $text-secondary;
+    font-size: 18px;
+    
+    &:hover {
+      color: $text-primary;
+    }
+  }
+}
+
+:deep(.van-form) {
+  padding: 0;
+}
+
+:deep(.van-cell-group) {
+  background: transparent;
+  margin: 0 $spacing-lg $spacing-lg;
+}
+
+:deep(.van-cell-group--inset) {
+  margin: 0 0 $spacing-lg;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+:deep(.van-cell) {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: $spacing-md $spacing-lg;
+}
+
+:deep(.van-cell:last-child) {
+  border-bottom: none;
+}
+
+:deep(.van-cell__title) {
+  color: $text-secondary;
+  font-size: $font-sm;
+  font-weight: $font-medium;
+}
+
+:deep(.van-field__control) {
+  color: $text-primary;
+  font-size: $font-base;
+  background: transparent;
+}
+
+:deep(.van-field__control::placeholder) {
+  color: $text-tertiary;
+}
+
+:deep(.van-field__control:focus) {
+  color: $text-primary;
+}
+
+:deep(.van-field__word-limit) {
+  color: $text-tertiary;
+  font-size: $font-xs;
+}
+
+:deep(.van-button) {
+  border-radius: $radius-md;
+  font-weight: $font-medium;
+  height: 48px;
+}
+
+:deep(.van-button--primary) {
+  background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+  border: none;
+  color: $text-primary;
+}
+
+:deep(.van-button--primary:active) {
+  background: linear-gradient(135deg, darken($accent-primary, 5%), $accent-primary);
+}
+
+:deep(.van-button--primary.van-button--loading) {
+  background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+  opacity: 0.8;
+}
+
+.edit-popup-content {
+  padding: $spacing-lg 0;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  padding: 0 $spacing-lg $spacing-md;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  .popup-title {
+    font-size: $font-lg;
+    font-weight: $font-semibold;
+    color: $text-primary;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.popup-body {
+  flex: 1;
+  padding: $spacing-lg 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-actions {
+  padding: 0 $spacing-lg;
+  margin-top: auto;
 }
 </style>

@@ -1,6 +1,7 @@
 @use 'sass:color';
 @use './variables.scss' as *;
 @use './mixins.scss' as *;
+@use './mobile.scss';
 
 // CSS 变量定义 - 用于主题切换和动态控制
 :root {
@@ -25,6 +26,12 @@
   --glass-border: #{$glass-border};
   --glass-shadow: #{$glass-shadow};
   --glass-blur: #{$glass-backdrop};
+
+  // 视口高度变量
+  --vh-fallback: #{$vh-fallback};
+  --vh-small: #{$vh-small};
+  --vh-large: #{$vh-large};
+  --vh-dynamic: #{$vh-dynamic};
 
   // 间距变量
   --spacing-xs: #{$spacing-xs};
@@ -83,6 +90,16 @@ body {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  
+  // 移动端优化
+  @include mobile {
+    // 防止iOS Safari缩放
+    -webkit-text-size-adjust: 100%;
+    // 防止Android字体缩放
+    text-size-adjust: 100%;
+    // 优化触摸滚动
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 // 链接

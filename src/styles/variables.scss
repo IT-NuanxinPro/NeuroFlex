@@ -87,6 +87,12 @@ $z-modal: 1050;
 $z-popover: 1060;
 $z-tooltip: 1070;
 
+// 视口高度变量 - 支持现代浏览器的动态视口
+$vh-fallback: 100vh; // 旧浏览器回退
+$vh-small: 100svh;   // 小视口高度（不包含浏览器UI）
+$vh-large: 100lvh;   // 大视口高度（包含浏览器UI）
+$vh-dynamic: 100dvh; // 动态视口高度（推荐）
+
 // 断点
 $breakpoint-xs: 320px;
 $breakpoint-sm: 640px;

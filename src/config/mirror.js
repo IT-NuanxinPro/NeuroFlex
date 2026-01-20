@@ -1,13 +1,28 @@
-// 配置：双侧肢体镜像协调
-
-export const modes = [
-  { value: 'different', name: '左右不同', desc: '左圆右方', icon: '🌀' },
-  { value: 'same', name: '左右同形', desc: '双手同形', icon: '✨' }
+export const trainingModes = [
+  {
+    value: 'mirror',
+    name: '镜像同步',
+    desc: '双手对称运动，如同照镜子 (基础)',
+    icon: '🦋',
+    difficulty: 1
+  },
+  {
+    value: 'parallel',
+    name: '平行同向',
+    desc: '双手向同一方向移动，克服对称本能 (进阶)',
+    icon: '🛤️',
+    difficulty: 2
+  },
+  {
+    value: 'dissociation',
+    name: '双侧分离',
+    desc: '左圆右方，左右脑独立处理不同任务 (挑战)',
+    icon: '🔀',
+    difficulty: 3
+  }
 ]
 
-export const templateOptions = [
-  { label: '自由', value: 'free' },
-  { label: '画圆', value: 'circle' },
-  { label: '方形', value: 'square' },
-  { label: '波浪', value: 'wave' }
+export const taskTypes = [
+  { label: '轨迹描摹', value: 'trace' },
+  { label: '自由创作', value: 'free' }
 ]

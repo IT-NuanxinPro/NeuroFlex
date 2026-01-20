@@ -1,53 +1,43 @@
 <template>
-  <div class="tab-layout">
-    <!-- PC端顶部导航栏 -->
-    <nav v-if="isPC" class="top-nav">
-      <div class="nav-container">
+  <div class="tab-layout keyboard-adaptive">
+    <!-- PC端侧边导航栏 -->
+    <nav v-if="isPCDevice" class="side-nav">
+      <div class="nav-header">
         <NeuroFlexLogo />
-        
-        <div class="nav-links">
-          <router-link to="/main/home" class="nav-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-            <span>首页</span>
-          </router-link>
-
-          <router-link to="/main/record" class="nav-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <span>训练记录</span>
-          </router-link>
-
-          <router-link to="/main/leaderboard" class="nav-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path
-                d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-              />
-            </svg>
-            <span>排行榜</span>
-          </router-link>
-
-          <router-link to="/main/profile" class="nav-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>个人中心</span>
-          </router-link>
-        </div>
-        
-        <!-- 移动端设置按钮 -->
-        <button v-if="!isPC" class="settings-button" @click="goToSettings">
+      </div>
+      
+      <div class="nav-links">
+        <router-link to="/main/home" class="nav-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path
-              d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-6 0l-4.2 4.2"
-            ></path>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-        </button>
+          <span>首页</span>
+        </router-link>
+
+        <router-link to="/main/record" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          <span>训练记录</span>
+        </router-link>
+
+        <router-link to="/main/leaderboard" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+            />
+          </svg>
+          <span>排行榜</span>
+        </router-link>
+
+        <router-link to="/main/profile" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>个人中心</span>
+        </router-link>
       </div>
     </nav>
 
@@ -60,7 +50,7 @@
     </div>
 
     <!-- 移动端底部导航栏 -->
-    <nav v-if="!isPC" class="bottom-nav">
+    <nav v-if="!isPCDevice" class="bottom-nav">
       <router-link to="/main/home" class="nav-item">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -100,23 +90,15 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
+import { isPC } from '@/utils/device'
 
 const route = useRoute()
 const router = useRouter()
 const transitionName = ref('fade')
-const isPC = ref(false)
-
-function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  
-  // 如果不是移动设备，且屏幕宽度大于1024px，认为是PC
-  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-}
+const isPCDevice = ref(isPC())
 
 function handleResize() {
-  detectPC()
+  isPCDevice.value = isPC()
 }
 
 function goToSettings() {
@@ -124,7 +106,7 @@ function goToSettings() {
 }
 
 onMounted(() => {
-  detectPC()
+  isPCDevice.value = isPC()
   window.addEventListener('resize', handleResize)
 })
 
@@ -143,14 +125,19 @@ watch(
 
 <style lang="scss" scoped>
 .tab-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
-  flex-direction: column;
   background: $bg-primary;
+  overflow: hidden;
   
-  // PC端添加顶部导航栏的padding
-  &:has(.top-nav) {
-    padding-top: 64px;
+  // PC端使用侧边导航布局
+  @media (min-width: $breakpoint-lg) {
+    flex-direction: row;
+  }
+  
+  // 移动端使用垂直布局
+  @media (max-width: 1023px) {
+    flex-direction: column;
   }
 }
 
@@ -158,7 +145,7 @@ watch(
   flex: 1;
   overflow: hidden;
   position: relative;
-  height: 0; // 强制flex子元素正确计算高度
+  min-height: 0;
 }
 
 // Tab页面之间的淡入淡出动画
@@ -172,76 +159,58 @@ watch(
   opacity: 0;
 }
 
-// PC端顶部导航栏
-.top-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+// PC端侧边导航栏
+.side-nav {
+  width: 240px;
+  flex-shrink: 0;
   background: rgba(26, 26, 46, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
   z-index: $z-fixed;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
 
-  .nav-container {
-    width: 100%;
-    padding: $spacing-md $spacing-2xl;
+  .nav-header {
+    padding: $spacing-xl $spacing-lg;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
-    position: relative;
+    justify-content: center;
   }
 
   .nav-links {
+    flex: 1;
+    padding: $spacing-lg 0;
     display: flex;
-    gap: $spacing-lg;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  .settings-button {
-    @include button-reset;
-    @include click-feedback;
-    width: 40px;
-    height: 40px;
-    border-radius: $radius-full;
-    background: rgba(255, 255, 255, 0.05);
-    color: $text-primary;
-    @include flex-center;
-    transition: all $transition-base;
-    margin-left: auto;
-
-    svg {
-      stroke-width: 2;
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
+    flex-direction: column;
+    gap: $spacing-xs;
+    overflow-y: auto;
+    @include custom-scrollbar;
   }
 
   .nav-link {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-lg;
+    gap: $spacing-md;
+    padding: $spacing-md $spacing-lg;
+    margin: 0 $spacing-sm;
     border-radius: $radius-md;
     color: $text-secondary;
     text-decoration: none;
     transition: all $transition-base;
     font-weight: $font-medium;
+    font-size: $font-base;
 
     svg {
       stroke-width: 2;
       transition: all $transition-base;
+      flex-shrink: 0;
+    }
+
+    span {
+      flex: 1;
     }
 
     &.router-link-exact-active {
@@ -257,6 +226,7 @@ watch(
       &:hover:not(.router-link-exact-active) {
         color: rgba(0, 212, 255, 0.8);
         background: rgba(0, 212, 255, 0.05);
+        transform: translateX(4px);
       }
     }
 
@@ -282,6 +252,22 @@ watch(
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   z-index: $z-fixed;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  
+  // 防止虚拟键盘推动导航栏
+  @include mobile {
+    // 确保导航栏始终固定在底部，不受键盘影响
+    bottom: 0 !important;
+    
+    // 键盘弹出时保持位置
+    @supports (bottom: env(keyboard-inset-height)) {
+      bottom: 0 !important;
+    }
+    
+    // iOS Safari 特殊处理
+    @supports (-webkit-appearance: none) {
+      padding-bottom: calc($spacing-sm + env(safe-area-inset-bottom));
+    }
+  }
 
   .nav-item {
     display: flex;
@@ -315,7 +301,6 @@ watch(
       transition: all $transition-base;
     }
 
-    // 激活状态 - 只使用精确匹配
     &.router-link-exact-active {
       color: $accent-primary;
 
@@ -329,7 +314,6 @@ watch(
       }
     }
 
-    // 悬停效果（仅桌面端）
     @media (hover: hover) and (pointer: fine) {
       &:hover:not(.router-link-exact-active) {
         color: rgba(0, 212, 255, 0.7);
@@ -341,7 +325,6 @@ watch(
       }
     }
 
-    // 点击效果
     &:active {
       transform: scale(0.95);
     }

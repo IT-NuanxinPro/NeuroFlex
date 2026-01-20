@@ -251,3 +251,72 @@
 @mixin fluid-padding($y: $fluid-spacing-md, $x: $fluid-spacing-lg) {
   padding: $y $x;
 }
+
+// 现代视口高度 - 支持动态视口
+@mixin viewport-height($type: dynamic) {
+  @if $type == dynamic {
+    // 动态视口高度（推荐）- 自动适应浏览器UI变化
+    height: $vh-fallback; // 回退
+    height: $vh-dynamic;
+  } @else if $type == small {
+    // 小视口高度 - 不包含浏览器UI（适合全屏应用）
+    height: $vh-fallback; // 回退
+    height: $vh-small;
+  } @else if $type == large {
+    // 大视口高度 - 包含浏览器UI
+    height: $vh-fallback; // 回退
+    height: $vh-large;
+  } @else {
+    // 传统视口高度
+    height: $vh-fallback;
+  }
+}
+
+// 最小视口高度
+@mixin min-viewport-height($type: dynamic) {
+  @if $type == dynamic {
+    min-height: $vh-fallback; // 回退
+    min-height: $vh-dynamic;
+  } @else if $type == small {
+    min-height: $vh-fallback; // 回退
+    min-height: $vh-small;
+  } @else if $type == large {
+    min-height: $vh-fallback; // 回退
+    min-height: $vh-large;
+  } @else {
+    min-height: $vh-fallback;
+  }
+}
+
+// 移动端按钮优化
+@mixin mobile-button {
+  // 基础样式
+  min-height: 44px; // iOS推荐的最小触摸目标
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-sm;
+  font-weight: $font-medium;
+  border-radius: $radius-md;
+  
+  // 防止文字换行
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  // 触摸优化
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
+  // 移动端特定调整
+  @include mobile {
+    min-height: 40px;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-xs;
+    
+    // 超小屏幕进一步优化
+    @media (max-width: 360px) {
+      min-height: 36px;
+      padding: $spacing-xs;
+      font-size: 11px;
+    }
+  }
+}

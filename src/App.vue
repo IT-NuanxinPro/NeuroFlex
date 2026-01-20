@@ -11,31 +11,18 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { isPC } from '@/utils/device'
 
 const router = useRouter()
 const route = useRoute()
 const transitionName = ref('none')
-
-// 检测是否为PC端
-const isPC = ref(false)
-
-function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  
-  // 如果不是移动设备，且屏幕宽度大于1024px，认为是PC
-  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-  
-  return isPC.value
-}
 
 // 监听路由变化，根据depth判断动画方向
 watch(
   () => route.path,
   (newPath, oldPath) => {
     // PC端不使用滑动动画
-    if (detectPC()) {
+    if (isPC()) {
       transitionName.value = 'fade'
       return
     }
@@ -92,12 +79,18 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .app-container {
-  min-height: 100vh;
+  @include min-viewport-height(dynamic);
   width: 100%;
   max-width: 100vw;
   background-color: var(--bg-primary);
   position: relative;
   overflow-x: hidden;
+  
+  // 移动端优化
+  @include mobile {
+    // 确保在移动端使用动态视口高度
+    @include min-viewport-height(small);
+  }
 }
 
 // 从右滑入（进入子页面）

@@ -1,10 +1,10 @@
 <template>
   <transition name="modal">
-    <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
-      <div class="modal-container" @click.stop>
+    <div v-if="visible" class="modal-overlay mobile-modal" @click="handleOverlayClick">
+      <div class="modal-container mobile-performance" @click.stop>
         <div class="modal-header">
-          <h3 class="modal-title">{{ title }}</h3>
-          <button v-if="showClose" class="close-button" @click="handleClose">
+          <h3 class="modal-title mobile-text-nowrap">{{ title }}</h3>
+          <button v-if="showClose" class="close-button mobile-touch-target" @click="handleClose">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -15,11 +15,11 @@
           <slot></slot>
         </div>
 
-        <div v-if="showFooter" class="modal-footer">
-          <button class="modal-button cancel-button" @click="handleCancel">
+        <div v-if="showFooter" class="modal-footer mobile-button-group">
+          <button class="modal-button cancel-button button mobile-touch-target" @click="handleCancel">
             {{ cancelText }}
           </button>
-          <button class="modal-button confirm-button" @click="handleConfirm">
+          <button class="modal-button confirm-button button mobile-touch-target" @click="handleConfirm">
             {{ confirmText }}
           </button>
         </div>
@@ -123,6 +123,15 @@ function handleOverlayClick() {
   justify-content: center;
   z-index: 1000;
   padding: $spacing-lg;
+  
+  // 使用动态视口高度
+  @include viewport-height(dynamic);
+  
+  @include mobile {
+    // 移动端使用小视口高度，避免地址栏影响
+    @include viewport-height(small);
+    padding: $spacing-md;
+  }
 }
 
 .modal-container {
@@ -137,6 +146,12 @@ function handleOverlayClick() {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  
+  @include mobile {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: $radius-md;
+  }
 }
 
 .modal-header {
@@ -187,15 +202,25 @@ function handleOverlayClick() {
   padding: $spacing-lg;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
+  
+  @include mobile {
+    padding: $spacing-md;
+    gap: $spacing-sm;
+  }
 }
 
 .modal-button {
   @include button-reset;
+  @include mobile-button;
   flex: 1;
   padding: $spacing-md $spacing-lg;
   border-radius: $radius-md;
   font-weight: $font-medium;
   transition: all $transition-base;
+  
+  @include mobile {
+    padding: $spacing-sm $spacing-md;
+  }
 }
 
 .cancel-button {

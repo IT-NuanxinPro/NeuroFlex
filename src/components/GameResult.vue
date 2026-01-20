@@ -1,7 +1,7 @@
 <template>
   <Transition name="result-modal" @enter="onEnter" @after-enter="onAfterEnter">
-    <div v-if="visible" class="result-overlay" @click.self="handleOverlayClick">
-      <div class="result-modal" :class="resultClass">
+    <div v-if="visible" class="result-overlay mobile-modal" @click.self="handleOverlayClick">
+      <div class="result-modal mobile-performance" :class="[resultClass, { 'compact-mode': compact }]">
         <!-- 背景装饰 -->
         <div class="result-bg-decoration">
           <div class="decoration-circle circle-1"></div>
@@ -51,10 +51,10 @@
         </div>
 
         <!-- 标题 -->
-        <h2 class="result-title">{{ title }}</h2>
+        <h2 class="result-title mobile-text-nowrap">{{ title }}</h2>
 
         <!-- 副标题（可选） -->
-        <p v-if="subtitle" class="result-subtitle">{{ subtitle }}</p>
+        <p v-if="subtitle" class="result-subtitle mobile-text-nowrap">{{ subtitle }}</p>
 
         <!-- 统计数据 -->
         <div class="result-stats">
@@ -64,26 +64,38 @@
             class="stat-item"
             :style="{ animationDelay: `${0.1 + index * 0.05}s` }"
           >
-            <span class="stat-label">{{ stat.label }}</span>
-            <span class="stat-value" :class="stat.highlight ? 'highlight' : ''">
+            <span class="stat-label mobile-text-nowrap">{{ stat.label }}</span>
+            <span class="stat-value mobile-text-nowrap" :class="stat.highlight ? 'highlight' : ''">
               {{ stat.value }}
             </span>
           </div>
         </div>
 
+        <!-- 扩展内容区域 (为后续功能预留) -->
+        <div v-if="$slots.extra || extraContent" class="result-extra-content">
+          <slot name="extra">
+            <div v-if="extraContent" v-html="extraContent"></div>
+          </slot>
+        </div>
+
         <!-- 操作按钮 -->
-        <div class="result-actions">
+        <div class="result-actions mobile-button-group">
           <button
             v-if="showRetry"
-            class="action-button secondary"
+            class="action-button secondary button mobile-touch-target"
+            :class="{ 'long-text': true }"
             @click="$emit('retry')"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
             </svg>
-            <span>再来一次</span>
+            <span>再试一次</span>
           </button>
-          <button class="action-button primary" @click="$emit('close')">
+          <button 
+            class="action-button primary button mobile-touch-target" 
+            :class="{ 'long-text': closeText.length > 4 }"
+            @click="$emit('close')"
+          >
             <span>{{ closeText }}</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M5 12h14M12 5l7 7-7 7" />
@@ -129,6 +141,14 @@ const props = defineProps({
   closeText: {
     type: String,
     default: '返回首页'
+  },
+  extraContent: {
+    type: String,
+    default: ''
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -163,6 +183,15 @@ function handleOverlayClick() {
   @include flex-center;
   z-index: 2000;
   padding: $spacing-lg;
+  
+  // 使用动态视口高度
+  @include viewport-height(dynamic);
+  
+  @include mobile {
+    // 移动端使用小视口高度，避免地址栏影响
+    @include viewport-height(small);
+    padding: $spacing-md;
+  }
 }
 
 .result-modal {
@@ -178,15 +207,111 @@ function handleOverlayClick() {
   -webkit-backdrop-filter: blur(20px);
   border-radius: $radius-lg;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: $spacing-3xl $spacing-2xl;
+  padding: $spacing-2xl $spacing-xl;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   overflow: hidden;
+  
+  // 限制最大高度，为后续内容预留空间
+  max-height: 85vh;
+  max-height: 85dvh;
 
   @include mobile {
     max-width: 90vw;
-    padding: $spacing-2xl $spacing-lg;
+    max-height: 80vh;
+    max-height: 80svh;
+    padding: $spacing-xl $spacing-lg;
+    
+    // 超小屏幕进一步压缩
+    @media (max-height: 640px) {
+      max-height: 75vh;
+      max-height: 75svh;
+      padding: $spacing-lg $spacing-md;
+    }
+  }
+}
+
+// 紧凑模式样式
+.result-modal.compact-mode {
+  padding: $spacing-xl $spacing-lg;
+  max-height: 75vh;
+  max-height: 75dvh;
+  
+  @include mobile {
+    padding: $spacing-lg $spacing-md;
+    max-height: 70vh;
+    max-height: 70svh;
+    
+    @media (max-height: 640px) {
+      max-height: 65vh;
+      max-height: 65svh;
+      padding: $spacing-md $spacing-sm;
+    }
+  }
+  
+  .result-icon-wrapper {
+    margin-bottom: $spacing-sm;
+    
+    @include mobile {
+      margin-bottom: $spacing-xs;
+    }
+  }
+  
+  .result-icon {
+    width: 64px;
+    height: 64px;
+    
+    @include mobile {
+      width: 48px;
+      height: 48px;
+    }
+  }
+  
+  .result-title {
+    font-size: $font-2xl;
+    margin-bottom: $spacing-xs;
+    
+    @include mobile {
+      font-size: $font-xl;
+      margin-bottom: 4px;
+    }
+  }
+  
+  .result-subtitle {
+    margin-bottom: $spacing-lg;
+    
+    @include mobile {
+      margin-bottom: $spacing-md;
+    }
+  }
+  
+  .result-stats {
+    margin-bottom: $spacing-lg;
+    gap: $spacing-sm;
+    
+    @include mobile {
+      margin-bottom: $spacing-md;
+      gap: $spacing-xs;
+    }
+    
+    .stat-item {
+      padding: $spacing-md;
+      
+      @include mobile {
+        padding: $spacing-sm;
+      }
+    }
+  }
+  
+  .result-extra-content {
+    margin-bottom: $spacing-md;
+    padding: $spacing-sm;
+    
+    @include mobile {
+      margin-bottom: $spacing-sm;
+      padding: $spacing-xs;
+    }
   }
 }
 
@@ -250,7 +375,11 @@ function handleOverlayClick() {
 // 图标样式
 .result-icon-wrapper {
   @include flex-center;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg;
+  
+  @include mobile {
+    margin-bottom: $spacing-md;
+  }
 }
 
 .result-icon {
@@ -262,6 +391,12 @@ function handleOverlayClick() {
   @include mobile {
     width: 64px;
     height: 64px;
+    
+    // 超小屏幕进一步缩小
+    @media (max-height: 640px) {
+      width: 56px;
+      height: 56px;
+    }
   }
 
   .icon-svg {
@@ -373,6 +508,11 @@ function handleOverlayClick() {
 
   @include mobile {
     font-size: $font-2xl;
+    margin-bottom: $spacing-xs;
+    
+    @media (max-height: 640px) {
+      font-size: $font-xl;
+    }
   }
 }
 
@@ -380,14 +520,19 @@ function handleOverlayClick() {
   text-align: center;
   font-size: $font-base;
   color: $text-secondary;
-  margin: 0 0 $spacing-2xl;
+  margin: 0 0 $spacing-xl;
   animation: fade-in-up 0.5s ease-out forwards;
   animation-delay: 0.4s;
   opacity: 0;
 
   @include mobile {
     font-size: $font-sm;
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg;
+    
+    @media (max-height: 640px) {
+      font-size: $font-xs;
+      margin-bottom: $spacing-md;
+    }
   }
 }
 
@@ -407,12 +552,17 @@ function handleOverlayClick() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
-  margin-bottom: $spacing-2xl;
+  margin-bottom: $spacing-xl;
 
   @include mobile {
     grid-template-columns: 1fr;
     gap: $spacing-sm;
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg;
+    
+    @media (max-height: 640px) {
+      margin-bottom: $spacing-md;
+      gap: $spacing-xs;
+    }
   }
 
   .stat-item {
@@ -429,6 +579,10 @@ function handleOverlayClick() {
 
     @include mobile {
       padding: $spacing-md;
+      
+      @media (max-height: 640px) {
+        padding: $spacing-sm $spacing-md;
+      }
     }
 
     &:hover {
@@ -444,6 +598,10 @@ function handleOverlayClick() {
 
       @include mobile {
         font-size: $font-xs;
+        
+        @media (max-height: 640px) {
+          font-size: 11px;
+        }
       }
     }
 
@@ -454,6 +612,10 @@ function handleOverlayClick() {
 
       @include mobile {
         font-size: $font-lg;
+        
+        @media (max-height: 640px) {
+          font-size: $font-base;
+        }
       }
 
       &.highlight {
@@ -477,6 +639,28 @@ function handleOverlayClick() {
   }
 }
 
+// 扩展内容区域
+.result-extra-content {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: fade-in-up 0.5s ease-out forwards;
+  animation-delay: 0.6s;
+  opacity: 0;
+  
+  @include mobile {
+    margin-bottom: $spacing-md;
+    padding: $spacing-sm;
+    
+    @media (max-height: 640px) {
+      margin-bottom: $spacing-sm;
+      padding: $spacing-xs $spacing-sm;
+    }
+  }
+}
+
 // 操作按钮
 .result-actions {
   display: flex;
@@ -487,10 +671,18 @@ function handleOverlayClick() {
 
   @include mobile {
     gap: $spacing-sm;
+    flex-direction: column;
+    
+    // 超小屏幕横向排列但缩小间距
+    @media (max-width: 360px) {
+      flex-direction: row;
+      gap: $spacing-xs;
+    }
   }
 
   .action-button {
     @include button-reset;
+    @include mobile-button;
     flex: 1;
     display: flex;
     align-items: center;
@@ -503,14 +695,44 @@ function handleOverlayClick() {
     transition: all $transition-base;
     position: relative;
     overflow: hidden;
+    
+    // 防止文字换行
+    white-space: nowrap;
+    text-overflow: ellipsis;
 
     @include mobile {
       padding: $spacing-md $spacing-lg;
       font-size: $font-sm;
+      gap: $spacing-xs;
+      
+      // 移动端文字优化
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      // 超小屏幕进一步优化
+      @media (max-width: 360px) {
+        padding: $spacing-sm;
+        font-size: $font-xs;
+        min-width: 0; // 允许flex收缩
+        
+        span {
+          font-size: 11px;
+        }
+        
+        svg {
+          width: 14px;
+          height: 14px;
+          flex-shrink: 0;
+        }
+      }
     }
 
     svg {
       transition: transform $transition-base;
+      flex-shrink: 0; // 防止图标被压缩
     }
 
     &::before {
@@ -545,6 +767,19 @@ function handleOverlayClick() {
           transform: rotate(-45deg);
         }
       }
+      
+      @include mobile {
+        &:hover {
+          transform: none; // 移动端禁用悬停效果
+          svg {
+            transform: none;
+          }
+        }
+        
+        &:active {
+          background: rgba(255, 255, 255, 0.15);
+        }
+      }
     }
 
     &.primary {
@@ -559,6 +794,22 @@ function handleOverlayClick() {
 
         svg {
           transform: translateX(4px);
+        }
+      }
+      
+      @include mobile {
+        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+        
+        &:hover {
+          transform: none; // 移动端禁用悬停效果
+          box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+          svg {
+            transform: none;
+          }
+        }
+        
+        &:active {
+          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.4);
         }
       }
     }

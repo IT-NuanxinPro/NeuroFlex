@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <!-- 移动端顶部栏 -->
-    <header v-if="!isPC" class="top-bar">
+    <header v-if="!isPCDevice" class="top-bar">
       <NeuroFlexLogo />
       <div class="user-actions">
         <button class="icon-button" aria-label="设置" @click="goToSettings">
@@ -16,16 +16,20 @@
     </header>
 
     <!-- 训练模块网格 -->
-    <main class="training-grid-container" :class="{ 'pc-layout': isPC }">
-      <div ref="gridRef" class="training-grid">
+    <main class="training-grid-container" :class="{ 'pc-layout': isPCDevice }">
+      <div class="training-grid">
         <div
           v-for="module in trainingModules"
           :key="module.id"
           class="training-card"
           @click="goToModule(module.route)"
         >
-          <div class="card-icon" v-html="module.icon"></div>
-          <h3 class="card-title">{{ module.title }}</h3>
+          <div class="card-header">
+            <div class="card-icon">
+              <component :is="module.icon" />
+            </div>
+            <h3 class="card-title">{{ module.title }}</h3>
+          </div>
           <p class="card-description">{{ module.description }}</p>
           <button class="enter-button">开始训练</button>
         </div>
@@ -38,28 +42,28 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
+import { isPC } from '@/utils/device'
+import {
+  SchulteIcon,
+  StroopIcon,
+  SequenceIcon,
+  AudioIcon,
+  MirrorIcon,
+  CategorizeIcon,
+  MemoryStoryIcon
+} from '@/components/icons'
 
 const router = useRouter()
-const gridRef = ref(null)
 
 // 检测是否为PC端
-const isPC = ref(false)
-
-function detectPC() {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
-  const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent)
-  
-  isPC.value = !isMobile && !isTablet && window.innerWidth > 1024
-  console.log('Home - isPC:', isPC.value, 'width:', window.innerWidth)
-}
+const isPCDevice = ref(isPC())
 
 function handleResize() {
-  detectPC()
+  isPCDevice.value = isPC()
 }
 
 onMounted(() => {
-  detectPC()
+  isPCDevice.value = isPC()
   window.addEventListener('resize', handleResize)
 })
 
@@ -74,49 +78,49 @@ const trainingModules = [
     title: '舒尔特方格',
     description: '提升视觉搜索和注意力，实现一目十行',
     route: '/schulte',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+    icon: SchulteIcon
   },
   {
     id: 'stroop',
     title: 'Stroop 训练',
     description: '增强认知控制和多任务处理能力',
     route: '/stroop',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+    icon: StroopIcon
   },
   {
     id: 'sequence',
     title: '序列记忆',
     description: '提高工作记忆容量和信息编码能力',
     route: '/sequence',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+    icon: SequenceIcon
   },
   {
     id: 'audio',
     title: '听觉注意',
     description: '增强抗干扰能力和听觉信息识别',
     route: '/audio',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+    icon: AudioIcon
   },
   {
     id: 'mirror',
     title: '镜像协调',
     description: '提升左右脑配合和运动协调能力',
     route: '/mirror',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>'
+    icon: MirrorIcon
   },
   {
     id: 'categorize',
     title: '规则分类',
     description: '优化逻辑思维和快速决策能力',
     route: '/categorize',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+    icon: CategorizeIcon
   },
   {
     id: 'memory-story',
     title: '情景记忆',
     description: '增强记忆联想和语义整合能力',
     route: '/memory-story',
-    icon: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+    icon: MemoryStoryIcon
   }
 ]
 
@@ -128,19 +132,15 @@ function goToModule(route) {
 function goToSettings() {
   router.push('/settings')
 }
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
 </script>
 
 <style lang="scss" scoped>
 .home-page {
-  height: 100vh;
+  height: 100%; // 填满父容器
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, $bg-primary 0%, $bg-secondary 100%);
-  overflow: hidden;
+  overflow: hidden; // 防止滚动条
 }
 
 .top-bar {
@@ -220,32 +220,108 @@ onUnmounted(() => {
   @include click-feedback;
   padding: $spacing-xl;
   cursor: pointer;
-  transition: all $transition-base;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); // 更丝滑的缓动函数
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+
+  @include mobile {
+    padding: $spacing-lg;
+  }
 
   @media (min-width: 1200px) {
     padding: $spacing-2xl;
+  }
+  
+  // 添加光晕效果
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+    pointer-events: none;
+    z-index: 0;
   }
 
   // 只在桌面端启用 hover 效果，移动端禁用以提升性能
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(0, 212, 255, 0.2);
-      border-color: rgba(0, 212, 255, 0.3);
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 16px 40px rgba(0, 212, 255, 0.25);
+      border-color: rgba(0, 212, 255, 0.4);
+      
+      &::before {
+        width: 300px;
+        height: 300px;
+      }
+      
+      .card-icon {
+        transform: scale(1.1) rotate(5deg);
+      }
+      
+      .enter-button {
+        background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+        transform: translateX(4px);
+      }
+    }
+  }
+  
+  // 移动端点击效果
+  @include mobile {
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+  
+  // CSS原生入场动画
+  animation: cardFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  
+  // 为每个卡片设置不同的延迟，实现依次出现效果
+  @for $i from 1 through 7 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{($i - 1) * 0.08}s; // 每个卡片间隔80ms
+    }
+  }
+}
+
+  // 标题和图标一行布局
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    width: 100%;
+    margin-bottom: $spacing-md;
+    position: relative;
+    z-index: 1; // 确保在光晕之上
+    
+    @include mobile {
+      gap: $spacing-sm;
+      margin-bottom: $spacing-sm;
     }
   }
 
   .card-icon {
     width: 48px;
     height: 48px;
-    margin-bottom: $spacing-lg;
+    flex-shrink: 0;
     border-radius: $radius-md;
     background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
     border: 1px solid rgba(0, 212, 255, 0.2);
     @include flex-center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); // 丝滑的过渡
+
+    @include mobile {
+      width: 40px;
+      height: 40px;
+    }
 
     @media (min-width: 1200px) {
       width: 56px;
@@ -255,6 +331,12 @@ onUnmounted(() => {
     svg {
       color: $accent-primary;
       filter: drop-shadow(0 2px 4px rgba(0, 212, 255, 0.3));
+      transition: filter 0.4s ease;
+      
+      @include mobile {
+        width: 24px;
+        height: 24px;
+      }
     }
   }
 
@@ -262,9 +344,16 @@ onUnmounted(() => {
     font-size: $font-lg;
     font-weight: $font-bold;
     color: $text-primary;
-    margin-bottom: $spacing-sm;
+    margin: 0;
     text-align: left;
-    width: 100%;
+    flex: 1;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1; // 确保在光晕之上
+
+    @include mobile {
+      font-size: $font-base;
+    }
 
     @media (min-width: 1200px) {
       font-size: $font-xl;
@@ -278,6 +367,14 @@ onUnmounted(() => {
     line-height: 1.6;
     text-align: left;
     flex: 1;
+    position: relative;
+    z-index: 1; // 确保在光晕之上
+
+    @include mobile {
+      font-size: $font-xs;
+      margin-bottom: $spacing-md;
+      line-height: 1.5;
+    }
 
     @media (min-width: 1200px) {
       font-size: $font-base;
@@ -293,7 +390,14 @@ onUnmounted(() => {
     color: $text-primary;
     font-weight: $font-semibold;
     font-size: $font-base;
-    transition: all $transition-base;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); // 丝滑的过渡
+    position: relative;
+    z-index: 1;
+
+    @include mobile {
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-sm;
+    }
 
     // 只在桌面端启用 hover 效果
     @media (hover: hover) and (pointer: fine) {
@@ -302,6 +406,17 @@ onUnmounted(() => {
         box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
       }
     }
+  }
+
+// 卡片入场动画关键帧
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
