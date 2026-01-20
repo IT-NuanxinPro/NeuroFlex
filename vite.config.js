@@ -112,9 +112,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // 添加版本号到文件名，避免缓存
-        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`,
         manualChunks: {
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           'gsap-vendor': ['gsap']

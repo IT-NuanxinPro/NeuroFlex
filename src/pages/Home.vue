@@ -126,10 +126,17 @@ const trainingModules = [
 
 // 导航方法
 function goToModule(route) {
-  router.push(route)
+  console.log('点击卡片，准备跳转到:', route)
+  try {
+    router.push(route)
+    console.log('路由跳转已触发')
+  } catch (error) {
+    console.error('路由跳转失败:', error)
+  }
 }
 
 function goToSettings() {
+  console.log('点击设置按钮')
   router.push('/settings')
 }
 </script>
