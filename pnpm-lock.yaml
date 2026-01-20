@@ -17,9 +17,6 @@ importers:
       gsap:
         specifier: ^3.12.5
         version: 3.14.2
-      jsencrypt:
-        specifier: ^3.3.2
-        version: 3.5.4
       pinia:
         specifier: ^2.1.7
         version: 2.3.1(vue@3.5.26)
@@ -2133,9 +2130,6 @@ packages:
   js-yaml@4.1.1:
     resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
     hasBin: true
-
-  jsencrypt@3.5.4:
-    resolution: {integrity: sha512-kNjfYEMNASxrDGsmcSQh/rUTmcoRfSUkxnAz+MMywM8jtGu+fFEZ3nJjHM58zscVnwR0fYmG9sGkTDjqUdpiwA==}
 
   jsesc@3.1.0:
     resolution: {integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==}
@@ -5448,8 +5442,6 @@ snapshots:
   js-yaml@4.1.1:
     dependencies:
       argparse: 2.0.1
-
-  jsencrypt@3.5.4: {}
 
   jsesc@3.1.0: {}
 
