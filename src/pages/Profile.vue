@@ -6,76 +6,157 @@
     </header>
 
     <main class="page-content" :class="{ 'pc-layout': isPCDevice }">
-      <!-- 用户信息卡片 -->
-      <div class="profile-card">
-        <div class="avatar-section">
-          <UserAvatar
-            :src="userStore.profile.avatar"
-            :size="100"
-            :clickable="true"
-            @click="triggerAvatarUpload"
-          />
-          <input
-            ref="avatarInput"
-            type="file"
-            accept="image/*"
-            style="display: none"
-            @change="handleAvatarUpload"
-          />
+      <!-- 未登录状态 - 游客模式 -->
+      <div v-if="!isLoggedIn" class="guest-mode">
+        <div class="guest-card">
+          <div class="avatar-section">
+            <UserAvatar
+              :src="null"
+              :size="100"
+              :clickable="true"
+              @click="goToLogin"
+            />
+            <div class="login-hint">点击头像登录</div>
+          </div>
+
+          <div class="guest-info">
+            <h2 class="username">游客模式</h2>
+            <p class="guest-description">登录后可享受完整功能</p>
+            <div class="auth-buttons">
+              <button class="auth-button primary" @click="goToLogin">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                登录
+              </button>
+              <button class="auth-button secondary" @click="goToRegister">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                注册
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="user-info">
-          <h2 class="username">{{ userStore.profile.name }}</h2>
-          <p class="join-date">加入时间: {{ formatDate(userStore.profile.createdAt) }}</p>
-          <button class="edit-button" @click="showEditModal = true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            编辑资料
-          </button>
+        <!-- 游客功能说明 -->
+        <div class="guest-features">
+          <h3 class="section-title">登录后可享受</h3>
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon">☁️</div>
+              <div class="feature-text">
+                <div class="feature-title">云端同步</div>
+                <div class="feature-desc">训练记录自动备份</div>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">🏆</div>
+              <div class="feature-text">
+                <div class="feature-title">排行榜</div>
+                <div class="feature-desc">与全国玩家竞技</div>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon">📊</div>
+              <div class="feature-text">
+                <div class="feature-title">详细统计</div>
+                <div class="feature-desc">个人训练分析报告</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 训练统计 -->
-      <div class="stats-section">
-        <h3 class="section-title">训练统计</h3>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-value">{{ userStore.totalTrainingSessions }}</div>
-            <div class="stat-label">训练次数</div>
+      <!-- 已登录状态 -->
+      <div v-else class="user-mode">
+        <!-- 用户信息卡片 -->
+        <div class="profile-card">
+          <div class="avatar-section">
+            <UserAvatar
+              :src="userStore.profile.avatar"
+              :size="100"
+              :clickable="true"
+              @click="triggerAvatarUpload"
+            />
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="handleAvatarUpload"
+            />
+            <div class="avatar-hint">点击更换头像</div>
           </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ formatMinutes(userStore.totalTrainingTime) }}</div>
-            <div class="stat-label">训练时长</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ userStore.averageScore }}</div>
-            <div class="stat-label">平均分数</div>
+
+          <div class="user-info">
+            <h2 class="username">{{ userStore.profile.name }}</h2>
+            <p class="join-date">加入时间: {{ formatDate(userStore.profile.createdAt) }}</p>
+            <div class="user-actions">
+              <button class="edit-button" @click="showEditModal = true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                编辑资料
+              </button>
+              <button class="logout-button" @click="handleLogout">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                退出登录
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 数据操作 -->
-      <div class="actions-section">
-        <h3 class="section-title">数据管理</h3>
-        <div class="action-buttons">
-          <button class="action-button" @click="exportData">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            导出数据
-          </button>
-          <button class="action-button danger" @click="clearHistory">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path
-                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              />
-            </svg>
-            清空记录
-          </button>
+        <!-- 训练统计 -->
+        <div class="stats-section">
+          <h3 class="section-title">训练统计</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ userStore.totalTrainingSessions }}</div>
+              <div class="stat-label">训练次数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ formatMinutes(userStore.totalTrainingTime) }}</div>
+              <div class="stat-label">训练时长</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ userStore.averageScore }}</div>
+              <div class="stat-label">平均分数</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 数据操作 -->
+        <div class="actions-section">
+          <h3 class="section-title">数据管理</h3>
+          <div class="action-buttons">
+            <button class="action-button" @click="exportData">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              导出数据
+            </button>
+            <button class="action-button danger" @click="clearHistory">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
+              </svg>
+              清空记录
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -134,7 +215,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useAuth } from '@/composables/useAuth.js'
 import { Popup as VanPopup, Form as VanForm, Field as VanField, CellGroup as VanCellGroup, Button as VanButton } from 'vant'
 import 'vant/lib/popup/style'
 import 'vant/lib/form/style'
@@ -145,7 +228,9 @@ import UserAvatar from '@/components/UserAvatar.vue'
 import { downloadData } from '@/utils/storage'
 import { isPC } from '@/utils/device'
 
+const router = useRouter()
 const userStore = useUserStore()
+const { isLoggedIn, logout } = useAuth()
 
 const showEditModal = ref(false)
 const editedName = ref(userStore.profile.name)
@@ -167,6 +252,28 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
+
+// 导航方法
+function goToLogin() {
+  router.push('/login')
+}
+
+function goToRegister() {
+  router.push('/register')
+}
+
+// 退出登录
+async function handleLogout() {
+  if (confirm('确定要退出登录吗？')) {
+    try {
+      await logout()
+      // 退出成功后刷新页面状态
+    } catch (error) {
+      console.error('Logout failed:', error)
+      alert('退出登录失败，请重试')
+    }
+  }
+}
 
 function formatDate(date) {
   const d = new Date(date)
@@ -389,6 +496,249 @@ function clearHistory() {
     &:hover {
       background: rgba(255, 255, 255, 0.1);
       border-color: $accent-primary;
+    }
+  }
+}
+
+// 游客模式样式
+.guest-mode {
+  .guest-card {
+    @include glass-card;
+    padding: $spacing-xl;
+    margin-bottom: $spacing-lg;
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+
+    @media (max-width: $breakpoint-sm) {
+      flex-direction: column;
+      text-align: center;
+      padding: $spacing-lg;
+      gap: $spacing-md;
+    }
+
+    .avatar-section {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $spacing-sm;
+
+      .login-hint {
+        font-size: $font-xs;
+        color: $accent-primary;
+        font-weight: $font-medium;
+      }
+    }
+
+    .guest-info {
+      flex: 1;
+      text-align: left;
+
+      @media (max-width: $breakpoint-sm) {
+        text-align: center;
+      }
+
+      .username {
+        font-size: $font-xl;
+        font-weight: $font-semibold;
+        margin-bottom: $spacing-xs;
+        color: $text-secondary;
+        
+        @include mobile {
+          font-size: $font-lg;
+        }
+      }
+
+      .guest-description {
+        color: $text-tertiary;
+        font-size: $font-sm;
+        margin-bottom: $spacing-lg;
+        
+        @include mobile {
+          font-size: $font-sm;
+          margin-bottom: $spacing-md;
+        }
+      }
+
+      .auth-buttons {
+        display: flex;
+        gap: $spacing-md;
+
+        @media (max-width: $breakpoint-sm) {
+          justify-content: center;
+          gap: $spacing-sm;
+        }
+      }
+    }
+  }
+
+  .guest-features {
+    .section-title {
+      font-size: $font-lg;
+      font-weight: $font-semibold;
+      margin-bottom: $spacing-md;
+      color: $text-primary;
+      
+      @include mobile {
+        font-size: $font-base;
+        margin-bottom: $spacing-sm;
+      }
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-md;
+
+      @include mobile {
+        gap: $spacing-sm;
+      }
+
+      .feature-item {
+        @include glass-card;
+        padding: $spacing-lg;
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        
+        @include mobile {
+          padding: $spacing-md;
+          gap: $spacing-sm;
+        }
+
+        .feature-icon {
+          font-size: $font-xl;
+          flex-shrink: 0;
+          
+          @include mobile {
+            font-size: $font-lg;
+          }
+        }
+
+        .feature-text {
+          flex: 1;
+
+          .feature-title {
+            font-weight: $font-semibold;
+            margin-bottom: $spacing-xs;
+            color: $text-primary;
+            font-size: $font-base;
+            
+            @include mobile {
+              font-size: $font-sm;
+              margin-bottom: 2px;
+            }
+          }
+
+          .feature-desc {
+            font-size: $font-sm;
+            color: $text-secondary;
+            
+            @include mobile {
+              font-size: $font-xs;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.auth-button {
+  @include button-reset;
+  @include click-feedback;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-md;
+  font-weight: $font-medium;
+  font-size: $font-sm;
+  transition: all $transition-base;
+  
+  @include mobile {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-sm;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &.primary {
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    border: none;
+    color: $text-primary;
+
+    &:hover {
+      background: linear-gradient(135deg, darken($accent-primary, 5%), darken($accent-secondary, 5%));
+      transform: translateY(-1px);
+    }
+  }
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: $text-primary;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: $accent-primary;
+    }
+  }
+}
+
+// 已登录用户模式样式
+.user-mode {
+  .avatar-section {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+
+    @media (max-width: $breakpoint-sm) {
+      display: flex;
+      justify-content: center;
+    }
+
+    .avatar-hint {
+      font-size: $font-xs;
+      color: $accent-primary;
+      font-weight: $font-medium;
+    }
+  }
+
+  .user-actions {
+    display: flex;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+
+    @media (max-width: $breakpoint-sm) {
+      justify-content: center;
+    }
+  }
+
+  .logout-button {
+    @include button-reset;
+    @include click-feedback;
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: rgba(255, 51, 102, 0.1);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    color: $accent-error;
+    font-size: $font-sm;
+    font-weight: $font-medium;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(255, 51, 102, 0.2);
+      border-color: $accent-error;
     }
   }
 }
@@ -753,17 +1103,17 @@ function clearHistory() {
 }
 
 :deep(.van-button--primary) {
-  background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+  background: linear-gradient(135deg, $accent-primary, $accent-secondary);
   border: none;
   color: $text-primary;
 }
 
 :deep(.van-button--primary:active) {
-  background: linear-gradient(135deg, darken($accent-primary, 5%), $accent-primary);
+  background: linear-gradient(135deg, darken($accent-primary, 5%), darken($accent-secondary, 5%));
 }
 
 :deep(.van-button--primary.van-button--loading) {
-  background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+  background: linear-gradient(135deg, $accent-primary, $accent-secondary);
   opacity: 0.8;
 }
 
