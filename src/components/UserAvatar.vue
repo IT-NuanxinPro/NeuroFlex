@@ -132,7 +132,7 @@ const iconSize = computed(() => {
   return Math.max(24, size * 0.6)
 })
 
-const gradientId = computed(() => `avatarGrad-${Math.random().toString(36).substr(2, 9)}`)
+const gradientId = computed(() => `avatarGrad-${Math.random().toString(36).substring(2, 11)}`)
 
 function handleClick() {
   if (props.clickable) {

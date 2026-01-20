@@ -1,270 +1,505 @@
-// 安全的本地存储工具
-
-const USER_DATA_KEY = 'neuroflex_user_data'
-
 /**
- * 保存用户数据，确保一定能保存住
- * @param {object} data - 用户数据
- * @returns {object} - {success: boolean, warning?: string}
+ * 本地存储管理器
+ * 使用 localStorage 进行数据持久化，支持移动端
  */
-export function saveUserData(data) {
-  try {
-    // 首先验证数据格式
-    if (!data || typeof data !== 'object') {
-      throw new Error('数据格式错误')
-    }
 
-    // 序列化数据
-    const json = JSON.stringify(data)
+class LocalStorageManager {
+  constructor() {
+    this.prefix = 'neuroflex_';
+    this.version = '1.0';
+    this.maxRecords = 1000; // 本地最多存储1000条记录
+  }
 
-    // 尝试保存
-    localStorage.setItem(USER_DATA_KEY, json)
-
-    // 验证保存是否成功
-    const saved = localStorage.getItem(USER_DATA_KEY)
-    if (!saved || saved !== json) {
-      throw new Error('保存验证失败')
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('保存用户数据失败:', error)
-
-    // 存储空间不足的处理
-    if (
-      error.name === 'QuotaExceededError' ||
-      error.code === 22 ||
-      error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-    ) {
-      console.warn('存储空间不足，尝试优化数据')
-
-      // 第一次尝试：只保留最近50条记录
-      try {
-        const optimized = { ...data }
-        if (optimized.trainingHistory && optimized.trainingHistory.length > 50) {
-          optimized.trainingHistory = optimized.trainingHistory.slice(0, 50)
-        }
-
-        const optimizedJson = JSON.stringify(optimized)
-        localStorage.setItem(USER_DATA_KEY, optimizedJson)
-
-        const savedOptimized = localStorage.getItem(USER_DATA_KEY)
-        if (savedOptimized === optimizedJson) {
-          // 更新传入的数据，保持同步
-          if (data.trainingHistory) {
-            data.trainingHistory = optimized.trainingHistory
-          }
-
-          return {
-            success: true,
-            warning: '存储空间不足，已自动优化，只保留最近50条记录'
-          }
-        }
-      } catch (retryError) {
-        console.error('优化数据后仍然保存失败:', retryError)
+  /**
+   * 保存训练记录到本地
+   */
+  saveTrainingRecord(record) {
+    try {
+      // 生成记录ID（如果没有）
+      if (!record.id) {
+        record.id = this.generateId();
       }
 
-      // 第二次尝试：清空其他数据，只保留用户数据
-      try {
-        const allKeys = []
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i)
-          if (key !== USER_DATA_KEY) {
-            allKeys.push(key)
-          }
+      // 添加本地标记
+      record.isLocal = true;
+      record.synced = false;
+      record.savedAt = new Date().toISOString();
+
+      // 获取现有记录
+      const records = this.getTrainingRecords();
+      
+      // 检查是否已存在
+      const existingIndex = records.findIndex(r => r.id === record.id);
+      
+      if (existingIndex >= 0) {
+        // 更新现有记录
+        records[existingIndex] = record;
+      } else {
+        // 添加新记录
+        records.push(record);
+      }
+
+      // 限制记录数量
+      if (records.length > this.maxRecords) {
+        // 保留最新的记录，删除最旧的
+        records.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        records.splice(this.maxRecords);
+      }
+
+      // 保存到 localStorage
+      this.setItem('training_records', records);
+      
+      return record.id;
+    } catch (error) {
+      console.error('Failed to save training record:', error);
+      throw new Error('保存训练记录失败');
+    }
+  }
+
+  /**
+   * 获取所有训练记录
+   */
+  getTrainingRecords(filter = {}) {
+    try {
+      const records = this.getItem('training_records', []);
+      
+      // 应用过滤器
+      let filteredRecords = records;
+      
+      if (filter.moduleName) {
+        filteredRecords = filteredRecords.filter(r => r.moduleName === filter.moduleName);
+      }
+      
+      if (filter.synced !== undefined) {
+        filteredRecords = filteredRecords.filter(r => r.synced === filter.synced);
+      }
+      
+      if (filter.startDate) {
+        const startDate = new Date(filter.startDate);
+        filteredRecords = filteredRecords.filter(r => new Date(r.completedAt) >= startDate);
+      }
+      
+      if (filter.endDate) {
+        const endDate = new Date(filter.endDate);
+        filteredRecords = filteredRecords.filter(r => new Date(r.completedAt) <= endDate);
+      }
+
+      // 按完成时间倒序排列
+      return filteredRecords.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+    } catch (error) {
+      console.error('Failed to get training records:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取未同步的记录
+   */
+  getUnsyncedRecords() {
+    return this.getTrainingRecords({ synced: false });
+  }
+
+  /**
+   * 标记记录为已同步
+   */
+  markRecordSynced(recordId, cloudId = null) {
+    try {
+      const records = this.getTrainingRecords();
+      const recordIndex = records.findIndex(r => r.id === recordId);
+      
+      if (recordIndex >= 0) {
+        records[recordIndex].synced = true;
+        records[recordIndex].syncedAt = new Date().toISOString();
+        
+        if (cloudId) {
+          records[recordIndex].cloudId = cloudId;
         }
+        
+        this.setItem('training_records', records);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Failed to mark record as synced:', error);
+      return false;
+    }
+  }
 
-        allKeys.forEach(key => localStorage.removeItem(key))
+  /**
+   * 批量标记记录为已同步
+   */
+  markRecordsSynced(recordIds) {
+    try {
+      const records = this.getTrainingRecords();
+      let updated = 0;
+      
+      recordIds.forEach(recordId => {
+        const recordIndex = records.findIndex(r => r.id === recordId);
+        if (recordIndex >= 0) {
+          records[recordIndex].synced = true;
+          records[recordIndex].syncedAt = new Date().toISOString();
+          updated++;
+        }
+      });
+      
+      if (updated > 0) {
+        this.setItem('training_records', records);
+      }
+      
+      return updated;
+    } catch (error) {
+      console.error('Failed to mark records as synced:', error);
+      return 0;
+    }
+  }
 
-        localStorage.setItem(USER_DATA_KEY, JSON.stringify(data))
+  /**
+   * 删除本地记录
+   */
+  deleteRecord(recordId) {
+    try {
+      const records = this.getTrainingRecords();
+      const filteredRecords = records.filter(r => r.id !== recordId);
+      
+      this.setItem('training_records', filteredRecords);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete record:', error);
+      return false;
+    }
+  }
 
+  /**
+   * 清理旧记录
+   */
+  cleanOldRecords(daysOld = 90) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+      
+      const records = this.getTrainingRecords();
+      const filteredRecords = records.filter(r => {
+        const recordDate = new Date(r.completedAt);
+        return recordDate >= cutoffDate;
+      });
+      
+      const deletedCount = records.length - filteredRecords.length;
+      
+      if (deletedCount > 0) {
+        this.setItem('training_records', filteredRecords);
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error('Failed to clean old records:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * 获取存储统计信息
+   */
+  getStorageStats() {
+    try {
+      const records = this.getTrainingRecords();
+      const unsyncedRecords = this.getUnsyncedRecords();
+      
+      // 计算存储大小（估算）
+      const dataSize = JSON.stringify(records).length;
+      
+      // 按模块统计
+      const moduleStats = {};
+      records.forEach(record => {
+        if (!moduleStats[record.moduleName]) {
+          moduleStats[record.moduleName] = {
+            total: 0,
+            synced: 0,
+            unsynced: 0
+          };
+        }
+        
+        moduleStats[record.moduleName].total++;
+        if (record.synced) {
+          moduleStats[record.moduleName].synced++;
+        } else {
+          moduleStats[record.moduleName].unsynced++;
+        }
+      });
+
+      return {
+        totalRecords: records.length,
+        syncedRecords: records.length - unsyncedRecords.length,
+        unsyncedRecords: unsyncedRecords.length,
+        estimatedSize: dataSize,
+        moduleStats: moduleStats,
+        lastRecord: records.length > 0 ? records[0].completedAt : null
+      };
+    } catch (error) {
+      console.error('Failed to get storage stats:', error);
+      return {
+        totalRecords: 0,
+        syncedRecords: 0,
+        unsyncedRecords: 0,
+        estimatedSize: 0,
+        moduleStats: {},
+        lastRecord: null
+      };
+    }
+  }
+
+  /**
+   * 导出所有数据
+   */
+  exportData() {
+    try {
+      const data = {
+        version: this.version,
+        exportedAt: new Date().toISOString(),
+        trainingRecords: this.getTrainingRecords(),
+        userSettings: this.getUserSettings(),
+        stats: this.getStorageStats()
+      };
+      
+      return JSON.stringify(data, null, 2);
+    } catch (error) {
+      console.error('Failed to export data:', error);
+      throw new Error('数据导出失败');
+    }
+  }
+
+  /**
+   * 导入数据
+   */
+  importData(jsonData) {
+    try {
+      const data = JSON.parse(jsonData);
+      
+      if (data.trainingRecords && Array.isArray(data.trainingRecords)) {
+        // 合并训练记录，避免重复
+        const existingRecords = this.getTrainingRecords();
+        const existingIds = new Set(existingRecords.map(r => r.id));
+        
+        const newRecords = data.trainingRecords.filter(r => !existingIds.has(r.id));
+        const allRecords = [...existingRecords, ...newRecords];
+        
+        // 限制记录数量
+        if (allRecords.length > this.maxRecords) {
+          allRecords.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+          allRecords.splice(this.maxRecords);
+        }
+        
+        this.setItem('training_records', allRecords);
+        
         return {
           success: true,
-          warning: '已清空其他数据以保存用户数据'
+          imported: newRecords.length,
+          total: allRecords.length
+        };
+      }
+      
+      throw new Error('Invalid data format');
+    } catch (error) {
+      console.error('Failed to import data:', error);
+      throw new Error('数据导入失败：' + error.message);
+    }
+  }
+
+  /**
+   * 清空所有数据
+   */
+  clearAllData() {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith(this.prefix));
+      keys.forEach(key => localStorage.removeItem(key));
+      return true;
+    } catch (error) {
+      console.error('Failed to clear all data:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取用户设置
+   */
+  getUserSettings() {
+    return this.getItem('user_settings', {
+      theme: 'light',
+      language: 'zh-CN',
+      notifications: true,
+      autoSync: true
+    });
+  }
+
+  /**
+   * 保存用户设置
+   */
+  saveUserSettings(settings) {
+    try {
+      const currentSettings = this.getUserSettings();
+      const newSettings = { ...currentSettings, ...settings };
+      this.setItem('user_settings', newSettings);
+      return true;
+    } catch (error) {
+      console.error('Failed to save user settings:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 生成唯一ID
+   */
+  generateId() {
+    return 'local_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+  }
+
+  /**
+   * 设置项目到 localStorage
+   */
+  setItem(key, value) {
+    try {
+      const fullKey = this.prefix + key;
+      const serializedValue = JSON.stringify(value);
+      localStorage.setItem(fullKey, serializedValue);
+    } catch (error) {
+      if (error.name === 'QuotaExceededError') {
+        // 存储空间不足，清理旧数据
+        this.cleanOldRecords(30); // 清理30天前的数据
+        try {
+          localStorage.setItem(this.prefix + key, JSON.stringify(value));
+        } catch (retryError) {
+          throw new Error('存储空间不足，请清理数据后重试');
         }
-      } catch (clearError) {
-        console.error('清空数据后仍然保存失败:', clearError)
+      } else {
+        throw error;
       }
     }
+  }
 
-    return { success: false, error: error.message }
+  /**
+   * 从 localStorage 获取项目
+   */
+  getItem(key, defaultValue = null) {
+    try {
+      const fullKey = this.prefix + key;
+      const item = localStorage.getItem(fullKey);
+      
+      if (item === null) {
+        return defaultValue;
+      }
+      
+      return JSON.parse(item);
+    } catch (error) {
+      console.error('Failed to get item from localStorage:', error);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * 删除项目
+   */
+  removeItem(key) {
+    try {
+      const fullKey = this.prefix + key;
+      localStorage.removeItem(fullKey);
+      return true;
+    } catch (error) {
+      console.error('Failed to remove item from localStorage:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 检查 localStorage 可用性
+   */
+  isAvailable() {
+    try {
+      const testKey = this.prefix + 'test';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * 获取存储使用情况
+   */
+  getStorageUsage() {
+    try {
+      let totalSize = 0;
+      let itemCount = 0;
+      
+      for (let key in localStorage) {
+        if (key.startsWith(this.prefix)) {
+          totalSize += localStorage[key].length;
+          itemCount++;
+        }
+      }
+      
+      return {
+        totalSize: totalSize,
+        itemCount: itemCount,
+        formattedSize: this.formatBytes(totalSize)
+      };
+    } catch (error) {
+      console.error('Failed to get storage usage:', error);
+      return {
+        totalSize: 0,
+        itemCount: 0,
+        formattedSize: '0 B'
+      };
+    }
+  }
+
+  /**
+   * 格式化字节数
+   */
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }
 
-/**
- * 加载用户数据
- * @returns {object|null} - 用户数据或null
- */
+// 创建单例实例
+const storageManager = new LocalStorageManager();
+
+export default storageManager;
+
+// 导出类用于测试
+export { LocalStorageManager };
+
+// 兼容性函数 - 为了保持向后兼容
+export function saveUserData(data) {
+  try {
+    storageManager.setItem('user_data', data);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save user data:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export function loadUserData() {
   try {
-    const json = localStorage.getItem(USER_DATA_KEY)
-    if (!json) {
-      return null
-    }
-
-    const data = JSON.parse(json)
-
-    // 恢复Date对象
-    if (data.profile) {
-      if (data.profile.createdAt && typeof data.profile.createdAt === 'string') {
-        data.profile.createdAt = new Date(data.profile.createdAt)
-      }
-      if (data.profile.lastLoginAt && typeof data.profile.lastLoginAt === 'string') {
-        data.profile.lastLoginAt = new Date(data.profile.lastLoginAt)
-      }
-    }
-
-    if (data.trainingHistory) {
-      data.trainingHistory.forEach(record => {
-        if (record.completedAt && typeof record.completedAt === 'string') {
-          record.completedAt = new Date(record.completedAt)
-        }
-      })
-    }
-
-    return data
+    return storageManager.getItem('user_data', null);
   } catch (error) {
-    console.error('加载用户数据失败:', error)
-    // 数据损坏时清空
-    localStorage.removeItem(USER_DATA_KEY)
-    return null
+    console.error('Failed to load user data:', error);
+    return null;
   }
 }
 
-/**
- * 保存数据到 localStorage
- * @param {string} key - 存储键
- * @param {any} data - 要存储的数据
- * @returns {boolean} - 是否成功
- */
-export function saveToStorage(key, data) {
+export function downloadData() {
   try {
-    const serialized = JSON.stringify(data)
-    localStorage.setItem(key, serialized)
-    return true
+    return storageManager.exportData();
   } catch (error) {
-    console.error(`存储失败 [${key}]:`, error)
-
-    // 检查是否是存储空间不足
-    if (error.name === 'QuotaExceededError') {
-      console.warn('存储空间不足，请清理数据')
-    }
-
-    return false
-  }
-}
-
-/**
- * 从 localStorage 读取数据
- * @param {string} key - 存储键
- * @param {any} defaultValue - 默认值
- * @returns {any} - 读取的数据或默认值
- */
-export function loadFromStorage(key, defaultValue = null) {
-  try {
-    const item = localStorage.getItem(key)
-    if (item === null) {
-      return defaultValue
-    }
-    return JSON.parse(item)
-  } catch (error) {
-    console.error(`读取失败 [${key}]:`, error)
-    return defaultValue
-  }
-}
-
-/**
- * 删除 localStorage 中的数据
- * @param {string} key - 存储键
- */
-export function removeFromStorage(key) {
-  try {
-    localStorage.removeItem(key)
-    return true
-  } catch (error) {
-    console.error(`删除失败 [${key}]:`, error)
-    return false
-  }
-}
-
-/**
- * 清空所有 localStorage 数据
- */
-export function clearStorage() {
-  try {
-    localStorage.clear()
-    return true
-  } catch (error) {
-    console.error('清空存储失败:', error)
-    return false
-  }
-}
-
-/**
- * 获取存储空间使用情况
- * @returns {object} - 使用情况信息
- */
-export function getStorageInfo() {
-  try {
-    let total = 0
-    for (const key in localStorage) {
-      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-        total += localStorage[key].length + key.length
-      }
-    }
-
-    // 估算的最大存储空间（通常是 5-10MB）
-    const maxSize = 5 * 1024 * 1024 // 5MB
-    const usedSize = total * 2 // UTF-16 编码，每个字符 2 字节
-    const percentage = ((usedSize / maxSize) * 100).toFixed(2)
-
-    return {
-      used: usedSize,
-      usedMB: (usedSize / 1024 / 1024).toFixed(2),
-      max: maxSize,
-      percentage: parseFloat(percentage),
-      available: maxSize - usedSize
-    }
-  } catch (error) {
-    console.error('获取存储信息失败:', error)
-    return null
-  }
-}
-
-/**
- * 检查存储空间是否充足
- * @param {number} requiredSize - 需要的空间大小（字节）
- * @returns {boolean} - 是否充足
- */
-export function hasEnoughSpace(requiredSize) {
-  const info = getStorageInfo()
-  if (!info) return false
-  return info.available >= requiredSize
-}
-
-/**
- * 导出数据为JSON文件
- * @param {string} filename - 文件名
- */
-export function downloadData(filename = 'neuroflex-backup.json') {
-  try {
-    const json = localStorage.getItem(USER_DATA_KEY)
-    if (!json) {
-      console.warn('没有数据可导出')
-      return false
-    }
-
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.click()
-    URL.revokeObjectURL(url)
-
-    return true
-  } catch (error) {
-    console.error('导出数据失败:', error)
-    return false
+    console.error('Failed to download data:', error);
+    throw error;
   }
 }

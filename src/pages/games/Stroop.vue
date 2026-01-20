@@ -369,18 +369,18 @@ function endTraining() {
   userStore.addTrainingRecord({
     moduleName: 'stroop',
     difficulty: difficulty.value,
-    timeMode: timeMode.value,
     score: Math.round(accuracy.value * 100),
     duration: totalTime,
     accuracy: accuracy.value,
     details: {
+      timeMode: timeMode.value,
+      totalQuestions: totalTrials.value,
       correctCount: correctCount.value,
-      totalTrials: totalTrials.value,
-      averageReactionTime: reaction.averageReactionTime.value,
-      fastestTime: reaction.fastestReaction.value,
-      slowestTime: reaction.slowestReaction.value,
+      wrongCount: wrongCount.value,
       timeoutCount: timeoutCount.value,
-      wrongCount: wrongCount.value
+      averageReactionTime: reaction.averageReactionTime.value,
+      fastestReaction: reaction.fastestReaction.value,
+      slowestReaction: reaction.slowestReaction.value
     }
   })
 }
