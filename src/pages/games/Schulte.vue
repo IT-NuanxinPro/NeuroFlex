@@ -377,9 +377,10 @@ function startGame() {
   
   trainingStore.startTraining('schulte')
 
-  // 开始计时
+  // 开始计时 - 使用独立的开始时间
+  const gameStartTime = Date.now()
   timer = setInterval(() => {
-    elapsedTime.value = Date.now() - game.timestamps.value[0]
+    elapsedTime.value = Date.now() - gameStartTime
 
     // 检查超时
     if (elapsedTime.value >= getTimeLimit(gridSize.value) * 1000) {
