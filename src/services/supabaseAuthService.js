@@ -13,12 +13,23 @@
 import { createClient } from '@supabase/supabase-js';
 import storageManager from '../utils/storage.js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// 直接使用 Supabase 配置
+const supabaseUrl = 'https://wrpkzevwemrzpidzgcvp.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndycGt6ZXZ3ZW1yenBpZHpnY3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5MjIzMTcsImV4cCI6MjA4NDQ5ODMxN30.KHnHCGblfhx88fqwkH0O64KUbhD4Jo6firMajWO-Ti8';
+
+// 调试信息
+console.log('Supabase Config:', {
+  url: 'Set (hardcoded)',
+  key: 'Set (hardcoded)',
+  mode: import.meta.env.MODE
+});
 
 class SupabaseAuthService {
   constructor() {
+    // 直接创建 Supabase 客户端
     this.supabase = createClient(supabaseUrl, supabaseAnonKey);
+    this.isOfflineMode = false;
+    
     this.currentUser = null;
     this.isInitialized = false;
     
