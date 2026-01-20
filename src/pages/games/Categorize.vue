@@ -7,7 +7,23 @@
         </svg>
       </button>
       <h1 class="page-title">规则导向分类</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="规则导向分类"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- 配置界面 -->
     <div v-if="!isTraining && !showResult" class="config-screen">
@@ -60,31 +76,35 @@
         <p class="remaining-time">{{ (remainingMs / 1000).toFixed(1) }}s</p>
       </div>
 
-      <div v-if="currentItem" class="item-display" :class="{ disabled: isGameDisabled }">
-        <div class="item-card">
-          <div class="item-icon">{{ currentItem.icon }}</div>
-          <div class="item-name">{{ currentItem.name }}</div>
-          <div v-if="dimensions === 2" class="item-price">¥{{ currentItem.price }}</div>
+      <Transition name="item-fade" mode="out-in">
+        <div v-if="currentItem" :key="currentIndex" class="item-display" :class="{ disabled: isGameDisabled }">
+          <div class="item-card">
+            <div class="item-icon">{{ currentItem.icon }}</div>
+            <div class="item-name">{{ currentItem.name }}</div>
+            <div v-if="dimensions === 2" class="item-price">¥{{ currentItem.price }}</div>
+          </div>
         </div>
-      </div>
+      </Transition>
 
-      <div v-if="currentItem" class="answer-options" :class="{ disabled: isGameDisabled }">
-        <button
-          v-for="option in currentOptions"
-          :key="option"
-          :class="[
-            'option-button',
-            {
-              correct: showFeedback && option === correctAnswer,
-              wrong: showFeedback && option === userAnswer && option !== correctAnswer
-            }
-          ]"
-          :disabled="showFeedback || isGameDisabled"
-          @click="selectAnswer(option)"
-        >
-          {{ option }}
-        </button>
-      </div>
+      <Transition name="options-fade" mode="out-in">
+        <div v-if="currentItem" :key="currentIndex" class="answer-options" :class="{ disabled: isGameDisabled }">
+          <button
+            v-for="option in currentOptions"
+            :key="option"
+            :class="[
+              'option-button',
+              {
+                correct: showFeedback && option === correctAnswer,
+                wrong: showFeedback && option === userAnswer && option !== correctAnswer
+              }
+            ]"
+            :disabled="showFeedback || isGameDisabled"
+            @click="selectAnswer(option)"
+          >
+            {{ option }}
+          </button>
+        </div>
+      </Transition>
     </div>
 
     <!-- 结果界面 -->
@@ -108,8 +128,10 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
+import { useReactionTime } from '@/composables/useReactionTime'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 import { itemPool, itemCountOptions, displayTimeOptions } from '@/config/categorize.js'
 
@@ -117,7 +139,37 @@ const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// 物品库已移至配置
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>根据规则快速判断物品的<strong>品类</strong>或<strong>品类+价格</strong>。</p>
+    <ul>
+      <li><strong>单维度</strong>：只判断品类（食品/文具/日用品/电子产品）</li>
+      <li><strong>双维度</strong>：同时判断品类和价格等级（高价>10元，低价≤10元）</li>
+      <li>在限定时间内选择正确答案</li>
+      <li>超时自动进入下一题</li>
+    </ul>
+  `,
+  benefits: `
+    <p>规则导向分类训练可以提升：</p>
+    <ul>
+      <li><strong>分类思维</strong> - 快速归类信息</li>
+      <li><strong>规则理解</strong> - 理解并应用规则</li>
+      <li><strong>多维判断</strong> - 同时处理多个维度信息</li>
+      <li><strong>决策速度</strong> - 提高快速决策能力</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>先熟悉<em>单维度</em>模式</li>
+      <li>双维度需要同时关注品类和价格</li>
+      <li>选项位置每次都会打乱，避免记忆位置</li>
+      <li>保持冷静，快速但准确地判断</li>
+    </ul>
+  `
+}
 
 // 配置
 const dimensions = ref(1)
@@ -136,7 +188,10 @@ const correctAnswer = ref('')
 const userAnswer = ref('')
 const showFeedback = ref(false)
 const results = ref([])
-const reactionTimes = ref([])
+
+// 使用反应时间 Hook
+const reaction = useReactionTime()
+
 let itemTimer = null
 const itemStartTime = ref(0)
 const remainingMs = ref(0)
@@ -150,11 +205,6 @@ const countdown = useGameCountdown({
 
 const correctCount = computed(() => results.value.filter(r => r.correct).length)
 const accuracy = computed(() => correctCount.value / items.value.length)
-const averageReactionTime = computed(() => {
-  if (reactionTimes.value.length === 0) return 0
-  const sum = reactionTimes.value.reduce((a, b) => a + b, 0)
-  return Math.round(sum / reactionTimes.value.length)
-})
 
 const isGameDisabled = computed(() => {
   return gameState.value === 'countdown'
@@ -174,7 +224,7 @@ const resultSubtitle = computed(() => {
 const resultStats = computed(() => [
   { label: '正确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: true },
   { label: '正确数', value: `${correctCount.value}/${items.value.length}`, highlight: false },
-  { label: '平均反应', value: `${averageReactionTime.value}ms`, highlight: true },
+  { label: '平均反应', value: `${reaction.averageReactionTime.value}ms`, highlight: true },
   { label: '错误数', value: `${items.value.length - correctCount.value}`, highlight: false }
 ])
 
@@ -185,9 +235,9 @@ function generateItems() {
 
 function generateOptions(item) {
   if (dimensions.value === 1) {
-    // 单维度：只有品类
+    // 单维度：只有品类，每次随机打乱顺序
     const categories = ['食品', '文具', '日用品', '电子产品']
-    return categories
+    return categories.sort(() => Math.random() - 0.5)
   } else {
     // 双维度：品类+价格
     const priceLevel = item.price > 10 ? '高价' : '低价'
@@ -213,7 +263,7 @@ function startTraining() {
   items.value = generateItems()
   currentIndex.value = 0
   results.value = []
-  reactionTimes.value = []
+  reaction.reset()
 
   // 设置为倒计时状态
   gameState.value = 'countdown'
@@ -266,15 +316,13 @@ function showNextItem() {
 
   // 如果在限定时间内未作答，自动判错并进入下一题
   itemTimer = setTimeout(() => {
-    const reactionTime = parseInt(displayTime.value)
-    reactionTimes.value.push(reactionTime)
+    // 超时不记录反应时间
 
     results.value.push({
       item: currentItem.value.name,
       userAnswer: '(超时)',
       correctAnswer: correctAnswer.value,
-      correct: false,
-      reactionTime
+      correct: false
     })
 
     currentIndex.value++
@@ -287,15 +335,25 @@ function selectAnswer(option) {
     clearTimeout(itemTimer)
     itemTimer = null
   }
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
   if (showFeedback.value) return
 
   const reactionTime = Date.now() - itemStartTime.value
-  reactionTimes.value.push(reactionTime)
-
+  
+  // 立即更新状态，提供即时反馈
   userAnswer.value = option
   showFeedback.value = true
 
   const isCorrect = option === correctAnswer.value
+  
+  // 只有正确答案才记录反应时间
+  if (isCorrect) {
+    reaction.recordClick()
+  }
+  
   results.value.push({
     item: currentItem.value.name,
     userAnswer: option,
@@ -304,11 +362,11 @@ function selectAnswer(option) {
     reactionTime
   })
 
-  // 延迟显示下一题
+  // 快速切换到下一题（缩短延迟，配合快速动画）
   setTimeout(() => {
     currentIndex.value++
     showNextItem()
-  }, 1000)
+  }, 350)
 }
 
 function endTraining() {
@@ -320,18 +378,22 @@ function endTraining() {
 
   // 保存训练记录
   const score = Math.round(accuracy.value * 100)
+  const totalTime = reaction.timestamps.value.length > 0
+    ? reaction.timestamps.value[reaction.timestamps.value.length - 1] - reaction.timestamps.value[0]
+    : 0
+    
   userStore.addTrainingRecord({
     moduleName: 'categorize',
     difficulty: dimensions.value === 1 ? '单维度' : '双维度',
     score,
-    duration: reactionTimes.value.reduce((a, b) => a + b, 0),
+    duration: totalTime,
     accuracy: accuracy.value,
     details: {
       dimensions: dimensions.value,
       itemCount: items.value.length,
       displayTime: displayTime.value,
       correctCount: correctCount.value,
-      averageReactionTime: averageReactionTime.value,
+      averageReactionTime: reaction.averageReactionTime.value,
       results: results.value
     }
   })
@@ -412,6 +474,27 @@ onUnmounted(() => {
     font-weight: $font-semibold;
     margin: 0;
     text-align: center;
+  }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
 }
 
@@ -628,7 +711,7 @@ onUnmounted(() => {
     padding: clamp($spacing-md, 3vh, $spacing-xl);
     font-size: clamp($font-sm, 2.5vw, $font-lg);
     font-weight: $font-medium;
-    transition: all $transition-base;
+    transition: all 0.15s ease; // 加快按钮响应速度
 
     // 只在桌面端启用 hover 效果
     @media (hover: hover) and (pointer: fine) {
@@ -645,12 +728,52 @@ onUnmounted(() => {
     &.correct {
       background: rgba(0, 255, 136, 0.2);
       border-color: $accent-success;
+      transition: all 0.1s ease; // 即时显示正确反馈
     }
 
     &.wrong {
       background: rgba(255, 51, 102, 0.2);
       border-color: $accent-error;
+      transition: all 0.1s ease; // 即时显示错误反馈
     }
   }
+}
+
+// 物品卡片过渡动画 - 快速流畅
+.item-fade-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.item-fade-leave-active {
+  transition: all 0.12s ease-in;
+}
+
+.item-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.item-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+// 选项按钮过渡动画 - 快速流畅
+.options-fade-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.options-fade-leave-active {
+  transition: all 0.12s ease-in;
+}
+
+.options-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.options-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

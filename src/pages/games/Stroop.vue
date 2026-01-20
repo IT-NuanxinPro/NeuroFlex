@@ -7,8 +7,24 @@
         </svg>
       </button>
       <h1 class="page-title">Stroop 训练</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
       <div v-if="isTraining" class="score">{{ correctCount }}/{{ totalTrials }}</div>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="Stroop 训练"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <main class="page-content">
       <div v-if="!isTraining && !showResult" class="config-screen">
@@ -65,25 +81,30 @@
           <div class="timer-fill" :style="{ width: `${timeRemaining}%` }"></div>
         </div>
 
-        <div
-          class="word-display"
-          :style="{ color: currentColor }"
-          :class="{ disabled: isGameDisabled }"
-        >
-          {{ currentWord }}
-        </div>
-
-        <div class="color-buttons" :class="{ disabled: isGameDisabled }">
-          <button
-            v-for="color in colors"
-            :key="color.name"
-            class="color-button"
-            :style="{ backgroundColor: color.value }"
-            @click="selectColor(color.name)"
+        <Transition name="word-fade" mode="out-in">
+          <div
+            :key="currentTrialIndex"
+            class="word-display"
+            :style="{ color: currentColor }"
+            :class="{ disabled: isGameDisabled }"
           >
-            {{ color.label }}
-          </button>
-        </div>
+            {{ currentWord }}
+          </div>
+        </Transition>
+
+        <Transition name="buttons-fade" mode="out-in">
+          <div :key="currentTrialIndex" class="color-buttons" :class="{ disabled: isGameDisabled }">
+            <button
+              v-for="color in colors"
+              :key="color.name"
+              class="color-button"
+              :style="{ backgroundColor: color.value }"
+              @click="selectColor(color.name)"
+            >
+              {{ color.label }}
+            </button>
+          </div>
+        </Transition>
 
         <div class="progress">
           <div class="progress-bar" :style="{ width: `${progress}%` }"></div>
@@ -111,16 +132,51 @@ import { ref, computed, onUnmounted } from 'vue'
 import { colors, defaultTrials, timeLimitSeconds } from '@/config/stroop.js'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
+import { useReactionTime } from '@/composables/useReactionTime'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const trainingStore = useTrainingStore()
+
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>根据<strong>文字的颜色</strong>（而非文字内容）选择对应的颜色按钮。</p>
+    <ul>
+      <li><strong>基础模式</strong>：文字内容与颜色一致（如红色的"红"）</li>
+      <li><strong>进阶模式</strong>：文字内容与颜色冲突（如蓝色的"红"）</li>
+      <li><strong>标准模式</strong>：无时间限制，测试反应速度</li>
+      <li><strong>限时模式</strong>：每个字3秒，超时算错</li>
+    </ul>
+  `,
+  benefits: `
+    <p>Stroop效应训练可以有效提升：</p>
+    <ul>
+      <li><strong>抗干扰能力</strong> - 抵抗无关信息的干扰</li>
+      <li><strong>选择性注意</strong> - 专注于关键信息</li>
+      <li><strong>认知灵活性</strong> - 快速切换思维模式</li>
+      <li><strong>执行控制</strong> - 抑制自动化反应</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>专注于<em>颜色</em>，忽略文字内容</li>
+      <li>从基础模式开始适应</li>
+      <li>进阶模式需要更强的抗干扰能力</li>
+      <li>保持放松，不要过度紧张</li>
+    </ul>
+  `
+}
 
 const difficulty = ref('basic')
 const timeMode = ref('standard') // 'standard' 或 'timed'
-// 颜色数组已移至配置 timeLimitSeconds // 限时模式每个字的时间限制
 const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
@@ -132,8 +188,10 @@ const wrongCount = ref(0)
 const totalTrials = ref(defaultTrials)
 const currentTrial = ref(0)
 const trialStartTime = ref(0) // 每个字的开始时间
-const reactionTimes = ref([])
 const timeoutCount = ref(0) // 超时次数
+
+// 使用反应时间 Hook
+const reaction = useReactionTime()
 
 // 限时模式相关
 const timeRemaining = ref(100) // 剩余时间百分比
@@ -149,19 +207,6 @@ const countdown = useGameCountdown({
 
 // 结果统计
 const accuracy = computed(() => correctCount.value / totalTrials.value)
-const avgReactionTime = computed(() => {
-  if (reactionTimes.value.length === 0) return 0
-  const sum = reactionTimes.value.reduce((a, b) => a + b, 0)
-  return Math.round(sum / reactionTimes.value.length)
-})
-const fastestTime = computed(() => {
-  if (reactionTimes.value.length === 0) return 0
-  return Math.min(...reactionTimes.value)
-})
-const slowestTime = computed(() => {
-  if (reactionTimes.value.length === 0) return 0
-  return Math.max(...reactionTimes.value)
-})
 
 const isGameDisabled = computed(() => {
   return gameState.value === 'countdown'
@@ -182,20 +227,22 @@ const resultSubtitle = computed(() => {
 })
 
 const resultStats = computed(() => {
-  const totalTime = reactionTimes.value.reduce((a, b) => a + b, 0)
+  const totalTime = reaction.timestamps.value.length > 0
+    ? reaction.timestamps.value[reaction.timestamps.value.length - 1] - reaction.timestamps.value[0]
+    : 0
   
   const stats = [
     { label: '总用时', value: `${(totalTime / 1000).toFixed(1)}秒`, highlight: true },
     { label: '正确率', value: `${(accuracy.value * 100).toFixed(0)}%`, highlight: true },
     { label: '正确数', value: `${correctCount.value}/${totalTrials.value}`, highlight: false },
     { label: '错误数', value: `${wrongCount.value}`, highlight: false },
-    { label: '平均反应', value: `${avgReactionTime.value}ms`, highlight: false }
+    { label: '平均反应', value: `${reaction.averageReactionTime.value}ms`, highlight: false }
   ]
 
   if (timeMode.value === 'standard') {
     stats.push(
-      { label: '最快反应', value: `${fastestTime.value}ms`, highlight: false },
-      { label: '最慢反应', value: `${slowestTime.value}ms`, highlight: false }
+      { label: '最快反应', value: `${reaction.fastestReaction.value}ms`, highlight: false },
+      { label: '最慢反应', value: `${reaction.slowestReaction.value}ms`, highlight: false }
     )
   } else {
     stats.push(
@@ -213,7 +260,7 @@ function handleStartTraining() {
   correctCount.value = 0
   wrongCount.value = 0
   currentTrial.value = 0
-  reactionTimes.value = []
+  reaction.reset()
   timeoutCount.value = 0
 
   // 设置为倒计时状态
@@ -280,7 +327,7 @@ function startTimer() {
 function handleTimeout() {
   clearTimers()
   timeoutCount.value++
-  reactionTimes.value.push(timeLimitSeconds * 1000) // 记录为最大时间
+  // 超时不记录反应时间
   setTimeout(nextTrial, 300)
 }
 
@@ -296,8 +343,7 @@ function clearTimers() {
 }
 
 function selectColor(colorName) {
-  const reactionTime = Date.now() - trialStartTime.value
-  reactionTimes.value.push(reactionTime)
+  reaction.recordClick()
 
   if (colorName === currentAnswer.value) {
     correctCount.value++
@@ -306,7 +352,8 @@ function selectColor(colorName) {
   }
 
   clearTimers()
-  setTimeout(nextTrial, 300)
+  // 快速切换到下一题（配合快速动画）
+  setTimeout(nextTrial, 350)
 }
 
 function endTraining() {
@@ -315,19 +362,23 @@ function endTraining() {
   gameState.value = 'completed'
   clearTimers()
 
+  const totalTime = reaction.timestamps.value.length > 0
+    ? reaction.timestamps.value[reaction.timestamps.value.length - 1] - reaction.timestamps.value[0]
+    : 0
+    
   userStore.addTrainingRecord({
     moduleName: 'stroop',
     difficulty: difficulty.value,
     timeMode: timeMode.value,
     score: Math.round(accuracy.value * 100),
-    duration: reactionTimes.value.reduce((a, b) => a + b, 0),
+    duration: totalTime,
     accuracy: accuracy.value,
     details: {
       correctCount: correctCount.value,
       totalTrials: totalTrials.value,
-      Time: avgReactionTime.value,
-      fastestTime: fastestTime.value,
-      slowestTime: slowestTime.value,
+      averageReactionTime: reaction.averageReactionTime.value,
+      fastestTime: reaction.fastestReaction.value,
+      slowestTime: reaction.slowestReaction.value,
       timeoutCount: timeoutCount.value,
       wrongCount: wrongCount.value
     }
@@ -403,6 +454,27 @@ onUnmounted(() => {
     font-size: $font-xl;
     margin: 0;
     text-align: center;
+  }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
 
   .score {
@@ -616,6 +688,7 @@ onUnmounted(() => {
     color: white;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     min-height: 60px;
+    transition: all 0.15s ease; // 加快按钮响应速度
     
     @include mobile {
       min-height: 70px;
@@ -635,5 +708,43 @@ onUnmounted(() => {
     background: linear-gradient(90deg, $accent-primary, $accent-secondary);
     transition: width $transition-base;
   }
+}
+
+// 文字显示过渡动画 - 快速流畅
+.word-fade-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.word-fade-leave-active {
+  transition: all 0.12s ease-in;
+}
+
+.word-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.word-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.1);
+}
+
+// 按钮组过渡动画 - 快速流畅
+.buttons-fade-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.buttons-fade-leave-active {
+  transition: all 0.12s ease-in;
+}
+
+.buttons-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.buttons-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

@@ -8,6 +8,18 @@ let cachedIsMobile = null
 let cachedIsTablet = null
 
 /**
+ * 检测是否为原生 APP 环境（Capacitor）
+ * @returns {boolean}
+ */
+export function isNativeApp() {
+  // 检查是否存在 Capacitor 对象
+  if (typeof window !== 'undefined' && window.Capacitor) {
+    return window.Capacitor.isNativePlatform()
+  }
+  return false
+}
+
+/**
  * 检测是否为PC端
  * @returns {boolean}
  */
@@ -65,11 +77,34 @@ export function resetDeviceCache() {
   cachedIsTablet = null
 }
 
+// 存储清理函数
+let deviceCleanupFunction = null
+
 /**
- * 监听窗口大小变化，自动重置缓存
+ * 初始化设备检测的自动缓存重置
  */
+export function initDeviceDetection() {
+  if (typeof window !== 'undefined' && !deviceCleanupFunction) {
+    window.addEventListener('resize', resetDeviceCache)
+    deviceCleanupFunction = () => {
+      window.removeEventListener('resize', resetDeviceCache)
+    }
+  }
+}
+
+/**
+ * 清理设备检测的监听器
+ */
+export function cleanupDeviceDetection() {
+  if (deviceCleanupFunction) {
+    deviceCleanupFunction()
+    deviceCleanupFunction = null
+  }
+}
+
+// 自动初始化
 if (typeof window !== 'undefined') {
-  window.addEventListener('resize', resetDeviceCache)
+  initDeviceDetection()
 }
 
 /**

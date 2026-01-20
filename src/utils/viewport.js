@@ -3,6 +3,8 @@
  * 解决移动端浏览器地址栏导致的视口高度问题
  */
 
+// 存储清理函数和初始化状态
+let cleanupFunctions = []
 let isInitialized = false
 
 /**
@@ -88,38 +90,53 @@ export function initViewportFix() {
   
   // 监听resize事件
   window.addEventListener('resize', debouncedSetViewportHeight)
+  cleanupFunctions.push(() => window.removeEventListener('resize', debouncedSetViewportHeight))
   
   // 监听orientationchange事件（移动端旋转）
-  window.addEventListener('orientationchange', () => {
+  const orientationHandler = () => {
     // 延迟执行，等待旋转完成
     setTimeout(setViewportHeight, 100)
-  })
+  }
+  window.addEventListener('orientationchange', orientationHandler)
+  cleanupFunctions.push(() => window.removeEventListener('orientationchange', orientationHandler))
   
   // 移动端特殊处理
   if (isMobileDevice()) {
     // 监听滚动事件（某些移动端浏览器滚动时会改变视口高度）
     let scrollTimer
-    window.addEventListener('scroll', () => {
+    const scrollHandler = () => {
       clearTimeout(scrollTimer)
       scrollTimer = setTimeout(setViewportHeight, 150)
-    }, { passive: true })
+    }
+    window.addEventListener('scroll', scrollHandler, { passive: true })
+    cleanupFunctions.push(() => {
+      clearTimeout(scrollTimer)
+      window.removeEventListener('scroll', scrollHandler)
+    })
     
     // iOS Safari特殊处理
     if (isIOSDevice()) {
       // 监听页面显示/隐藏（处理Safari地址栏自动隐藏）
-      document.addEventListener('visibilitychange', () => {
+      const visibilityHandler = () => {
         if (!document.hidden) {
           setTimeout(setViewportHeight, 300)
         }
-      })
+      }
+      document.addEventListener('visibilitychange', visibilityHandler)
+      cleanupFunctions.push(() => document.removeEventListener('visibilitychange', visibilityHandler))
       
       // 监听焦点事件（处理虚拟键盘）
-      window.addEventListener('focusin', () => {
+      const focusinHandler = () => {
         setTimeout(setViewportHeight, 300)
-      })
-      
-      window.addEventListener('focusout', () => {
+      }
+      const focusoutHandler = () => {
         setTimeout(setViewportHeight, 300)
+      }
+      window.addEventListener('focusin', focusinHandler)
+      window.addEventListener('focusout', focusoutHandler)
+      cleanupFunctions.push(() => {
+        window.removeEventListener('focusin', focusinHandler)
+        window.removeEventListener('focusout', focusoutHandler)
       })
     }
     
@@ -137,6 +154,7 @@ export function initViewportFix() {
       }
       
       window.addEventListener('resize', checkHeightChange)
+      cleanupFunctions.push(() => window.removeEventListener('resize', checkHeightChange))
     }
     
     // 微信浏览器特殊处理
@@ -145,9 +163,11 @@ export function initViewportFix() {
       document.body.classList.add('wechat-browser')
       
       // 监听微信浏览器的特殊事件
-      document.addEventListener('WeixinJSBridgeReady', () => {
+      const wechatHandler = () => {
         setTimeout(setViewportHeight, 100)
-      })
+      }
+      document.addEventListener('WeixinJSBridgeReady', wechatHandler)
+      cleanupFunctions.push(() => document.removeEventListener('WeixinJSBridgeReady', wechatHandler))
     }
   }
   
@@ -168,6 +188,17 @@ export function initViewportFix() {
   })
   
   isInitialized = true
+}
+
+/**
+ * 清理视口修复的所有监听器
+ * 用于应用卸载或重新初始化时清理资源
+ */
+export function cleanupViewportFix() {
+  // 执行所有清理函数
+  cleanupFunctions.forEach(cleanup => cleanup())
+  cleanupFunctions = []
+  isInitialized = false
 }
 
 /**

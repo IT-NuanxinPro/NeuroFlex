@@ -7,7 +7,23 @@
         </svg>
       </button>
       <h1 class="page-title">听觉选择性注意</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="听觉选择性注意"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- 配置界面 -->
     <div v-if="!isTraining && !showResult" class="config-screen">
@@ -77,8 +93,8 @@
     <!-- 训练界面 - 输入阶段 -->
     <div v-if="isTraining && phase === 'input'" class="training-screen">
       <div class="input-section">
-        <h3>请输入你听到的数字序列</h3>
-        <p class="input-hint">按顺序输入，用空格分隔（最多{{ digitSequence.length }}个数字）</p>
+        <h3>请输入听到的数字序列</h3>
+        <p class="input-hint">按顺序输入，用空格分隔</p>
 
         <div class="input-wrapper">
           <input
@@ -106,8 +122,8 @@
           >
             {{ num }}
           </button>
-          <button class="num-button space-button" @click="addSpace">空格</button>
-          <button class="num-button delete-button" @click="deleteDigit">删除</button>
+          <button class="num-button action-button" @click="addSpace">空格</button>
+          <button class="num-button action-button" @click="deleteDigit">删除</button>
         </div>
 
         <div class="input-actions">
@@ -140,8 +156,11 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
+import { isNativeApp } from '@/utils/device'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 import { backgroundOptions, digitCountOptions, snrOptions } from '@/config/audio.js'
 
@@ -153,6 +172,39 @@ const trainingStore = useTrainingStore()
 const signalNoiseRatio = ref(snrOptions[0])
 const backgroundType = ref('white')
 const digitCount = ref('6')
+
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>在<strong>背景噪音</strong>中仔细聆听数字序列，然后按顺序输入。</p>
+    <ul>
+      <li>选择难度等级（背景噪音强度）</li>
+      <li>选择数字数量（4-8个）</li>
+      <li>倒计时后开始播放数字</li>
+      <li>播放完成后，按顺序输入听到的数字</li>
+      <li>可以重新播放一次</li>
+    </ul>
+  `,
+  benefits: `
+    <p>听觉选择性注意训练可以有效提升：</p>
+    <ul>
+      <li><strong>听觉注意力</strong> - 在干扰环境中聚焦关键信息</li>
+      <li><strong>听觉记忆</strong> - 短期记忆和序列记忆能力</li>
+      <li><strong>抗干扰能力</strong> - 过滤背景噪音的能力</li>
+      <li><strong>信息处理速度</strong> - 快速识别和记忆听觉信息</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>从<em>简单难度</em>开始，逐步增加噪音强度</li>
+      <li>专注于数字的声音，忽略背景噪音</li>
+      <li>可以在脑海中重复数字来加强记忆</li>
+      <li>建议在安静环境中训练，戴耳机效果更佳</li>
+    </ul>
+  `
+}
 
 // 游戏状态
 const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
@@ -194,22 +246,67 @@ const resultSubtitle = computed(() => {
   return '多加练习，你会做得更好！'
 })
 
-const resultStats = computed(() => [
-  { label: '正确数字', value: `${correctDigits.value}/${digitSequence.value.length}`, highlight: true },
-  { label: '顺序正确', value: `${correctOrder.value}/${digitSequence.value.length}`, highlight: true },
-  { label: '准确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: false },
-  { label: '难度', value: `SNR ${signalNoiseRatio.value}%`, highlight: false }
-])
+const resultStats = computed(() => {
+  // 构建带颜色标记的用户答案
+  let userAnswerDisplay = ''
+  if (userDigits.value.length > 0) {
+    userAnswerDisplay = userDigits.value.map((digit, index) => {
+      const isCorrect = digit === digitSequence.value[index]
+      const color = isCorrect ? '#00ff88' : '#ff3366'
+      return `<span style="color: ${color}">${digit}</span>`
+    }).join(' ')
+  } else {
+    userAnswerDisplay = '未输入'
+  }
+  
+  return [
+    { label: '正确数字', value: `${correctDigits.value}/${digitSequence.value.length}`, highlight: true },
+    { label: '顺序正确', value: `${correctOrder.value}/${digitSequence.value.length}`, highlight: true },
+    { label: '准确率', value: `${Math.round(accuracy.value * 100)}%`, highlight: false },
+    { label: '难度', value: `SNR ${signalNoiseRatio.value}%`, highlight: false },
+    { label: '正确答案', value: digitSequence.value.join(' '), highlight: false },
+    { label: '你的答案', value: userAnswerDisplay, highlight: false, isHtml: true }
+  ]
+})
 
 let audioContext = null
 let playTimer = null
 let backgroundGainNode = null
+let backgroundSource = null
 
 // 倒计时设置
 const countdown = useGameCountdown({
   duration: 3,
   onComplete: startGame
 })
+
+// 初始化语音引擎
+function initSpeechSynthesis() {
+  return new Promise((resolve) => {
+    if ('speechSynthesis' in window) {
+      // 等待语音引擎加载
+      let voices = window.speechSynthesis.getVoices()
+      
+      if (voices.length > 0) {
+        resolve(voices)
+      } else {
+        // 监听语音引擎加载完成
+        window.speechSynthesis.onvoiceschanged = () => {
+          voices = window.speechSynthesis.getVoices()
+          resolve(voices)
+        }
+        
+        // 超时保护（2秒后无论如何都继续）
+        setTimeout(() => {
+          resolve(window.speechSynthesis.getVoices())
+        }, 2000)
+      }
+    } else {
+      console.warn('浏览器不支持 Web Speech API')
+      resolve([])
+    }
+  })
+}
 
 function generateDigitSequence() {
   const digits = []
@@ -244,15 +341,54 @@ function playDigitSound(digit) {
     }, 800)
   }
 
-  // 使用Web Speech API播放数字
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(digit.toString())
-    utterance.lang = 'zh-CN'
-    utterance.rate = 0.9 // 稍微慢一点，更清晰
-    utterance.pitch = 1.0
-    utterance.volume = 1.0 // 数字音量始终最大
+  // 判断是否为原生 APP
+  if (isNativeApp()) {
+    // 使用 Capacitor Text-to-Speech
+    TextToSpeech.speak({
+      text: digit.toString(),
+      lang: 'zh-CN',
+      rate: 0.9,
+      pitch: 1.0,
+      volume: 1.0,
+      category: 'ambient'
+    }).catch(error => {
+      console.error('Capacitor TTS 播放错误:', error)
+    })
+  } else {
+    // 使用 Web Speech API（浏览器环境）
+    if ('speechSynthesis' in window) {
+      // 先取消之前的语音（避免堆积）
+      window.speechSynthesis.cancel()
+      
+      const utterance = new SpeechSynthesisUtterance(digit.toString())
+      utterance.lang = 'zh-CN'
+      utterance.rate = 0.9
+      utterance.pitch = 1.0
+      utterance.volume = 1.0
+      
+      // 添加错误处理
+      utterance.onerror = (event) => {
+        console.error('语音播放错误:', event)
+      }
+      
+      utterance.onstart = () => {
+        console.log('开始播放数字:', digit)
+      }
 
-    window.speechSynthesis.speak(utterance)
+      // 确保语音引擎已加载
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) {
+        // 优先使用中文语音
+        const zhVoice = voices.find(voice => voice.lang.includes('zh'))
+        if (zhVoice) {
+          utterance.voice = zhVoice
+        }
+      }
+
+      window.speechSynthesis.speak(utterance)
+    } else {
+      console.warn('浏览器不支持 Web Speech API')
+    }
   }
 }
 
@@ -290,6 +426,11 @@ function playBackgroundNoise() {
 function startTraining() {
   // 用户交互后初始化音频上下文
   initAudioContext()
+  
+  // 初始化语音引擎
+  initSpeechSynthesis().then(() => {
+    console.log('语音引擎已准备就绪')
+  })
 
   // 立即进入训练界面并生成数字序列
   isTraining.value = true
@@ -320,7 +461,7 @@ function playAudioSequence() {
   currentDigitIndex.value = 0
 
   // 启动背景噪音
-  const backgroundSource = playBackgroundNoise()
+  backgroundSource = playBackgroundNoise()
 
   const interval = 1500 // 每个数字间隔1.5秒
 
@@ -337,7 +478,10 @@ function playAudioSequence() {
       playTimer = null
 
       // 停止背景噪音
-      backgroundSource.stop()
+      if (backgroundSource) {
+        backgroundSource.stop()
+        backgroundSource = null
+      }
 
       // 播放完成，进入输入阶段
       setTimeout(() => {
@@ -483,13 +627,24 @@ function goBack() {
     clearInterval(playTimer)
     playTimer = null
   }
+  if (backgroundSource) {
+    backgroundSource.stop()
+    backgroundSource = null
+  }
   if (audioContext) {
     audioContext.close()
     audioContext = null
   }
-  if (window.speechSynthesis) {
+  
+  // 停止语音播放
+  if (isNativeApp()) {
+    TextToSpeech.stop().catch(error => {
+      console.error('停止 TTS 错误:', error)
+    })
+  } else if (window.speechSynthesis) {
     window.speechSynthesis.cancel()
   }
+  
   // 清理倒计时
   countdown.cleanup()
   router.back()
@@ -500,13 +655,24 @@ onUnmounted(() => {
     clearInterval(playTimer)
     playTimer = null
   }
+  if (backgroundSource) {
+    backgroundSource.stop()
+    backgroundSource = null
+  }
   if (audioContext) {
     audioContext.close()
     audioContext = null
   }
-  if (window.speechSynthesis) {
+  
+  // 停止语音播放
+  if (isNativeApp()) {
+    TextToSpeech.stop().catch(error => {
+      console.error('停止 TTS 错误:', error)
+    })
+  } else if (window.speechSynthesis) {
     window.speechSynthesis.cancel()
   }
+  
   // 清理倒计时
   countdown.cleanup()
 })
@@ -554,6 +720,27 @@ onUnmounted(() => {
     font-weight: $font-semibold;
     margin: 0;
     text-align: center;
+  }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
 }
 
@@ -666,11 +853,15 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
+  padding: calc($spacing-md + 60px) $spacing-lg $spacing-lg;
   overflow: hidden;
   position: relative;
   min-height: 0;
   gap: $spacing-md;
+
+  @include mobile {
+    padding: calc($spacing-md + 60px) $spacing-md $spacing-md;
+  }
 }
 
 .audio-visual {
@@ -724,40 +915,79 @@ onUnmounted(() => {
 .input-section {
   @include glass-card;
   flex-shrink: 0;
-  padding: $spacing-2xl;
-  max-width: 600px;
+  padding: $spacing-xl $spacing-lg;
+  max-width: 500px;
   width: 100%;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  @include custom-scrollbar;
+
+  @include mobile {
+    padding: $spacing-lg $spacing-md;
+    max-width: 95vw;
+  }
 
   h3 {
     text-align: center;
-    margin-bottom: $spacing-sm;
+    margin: 0 0 $spacing-xs;
+    font-size: $font-lg;
+    font-weight: $font-semibold;
+
+    @include mobile {
+      font-size: $font-base;
+    }
   }
 
   .input-hint {
     text-align: center;
     color: $text-secondary;
-    margin-bottom: $spacing-xl;
+    margin: 0 0 $spacing-lg;
+    font-size: $font-sm;
+
+    @include mobile {
+      font-size: $font-xs;
+      margin-bottom: $spacing-md;
+    }
   }
 
   .input-wrapper {
     position: relative;
     margin-bottom: $spacing-lg;
+
+    @include mobile {
+      margin-bottom: $spacing-md;
+    }
   }
 
   .digit-input {
     width: 100%;
-    padding: $spacing-lg;
-    padding-right: 80px;
+    padding: $spacing-md $spacing-lg;
+    padding-right: 70px;
     border-radius: $radius-md;
     background: rgba(255, 255, 255, 0.05);
     border: 2px solid rgba(255, 255, 255, 0.1);
     color: $text-primary;
-    font-size: $font-xl;
+    font-size: $font-lg;
     text-align: center;
+    font-family: 'Courier New', Consolas, monospace;
+    letter-spacing: 0.1em;
+    transition: all $transition-base;
+
+    @include mobile {
+      padding: $spacing-sm $spacing-md;
+      padding-right: 60px;
+      font-size: $font-base;
+    }
 
     &:focus {
       outline: none;
       border-color: $accent-primary;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+      letter-spacing: normal;
     }
   }
 
@@ -766,13 +996,20 @@ onUnmounted(() => {
     right: $spacing-md;
     top: 50%;
     transform: translateY(-50%);
-    font-size: $font-sm;
+    font-size: $font-xs;
     font-weight: $font-bold;
     color: $accent-primary;
     background: rgba(0, 212, 255, 0.1);
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-sm;
     transition: all $transition-base;
+    white-space: nowrap;
+
+    @include mobile {
+      right: $spacing-sm;
+      font-size: 10px;
+      padding: 2px $spacing-xs;
+    }
 
     &.limit-reached {
       color: $accent-warning;
@@ -784,41 +1021,74 @@ onUnmounted(() => {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: $spacing-sm;
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg;
+
+    @include mobile {
+      gap: $spacing-xs;
+      margin-bottom: $spacing-md;
+    }
 
     .num-button {
       @include button-reset;
       @include click-feedback;
-      padding: $spacing-lg;
+      aspect-ratio: 1;
       border-radius: $radius-md;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: $text-primary;
-      font-size: $font-lg;
-      font-weight: $font-medium;
+      font-size: $font-xl;
+      font-weight: $font-semibold;
+      transition: all $transition-base;
+      @include flex-center;
+
+      @include mobile {
+        font-size: $font-lg;
+        border-radius: $radius-sm;
+      }
 
       &:hover {
         background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(0, 212, 255, 0.3);
       }
 
-      &.space-button,
-      &.delete-button {
+      &:active {
+        background: rgba(0, 212, 255, 0.2);
+        transform: scale(0.95);
+      }
+
+      &.action-button {
         font-size: $font-sm;
+        font-weight: $font-medium;
+
+        @include mobile {
+          font-size: $font-xs;
+        }
       }
     }
   }
 
   .input-actions {
     display: flex;
-    gap: $spacing-md;
+    gap: $spacing-sm;
+
+    @include mobile {
+      gap: $spacing-xs;
+    }
 
     button {
       @include button-reset;
       @include click-feedback;
       flex: 1;
-      padding: $spacing-lg;
+      padding: $spacing-md;
       border-radius: $radius-md;
-      font-weight: $font-medium;
+      font-weight: $font-semibold;
+      font-size: $font-base;
+      transition: all $transition-base;
+
+      @include mobile {
+        padding: $spacing-sm;
+        font-size: $font-sm;
+      }
 
       &:disabled {
         opacity: 0.5;
@@ -830,11 +1100,20 @@ onUnmounted(() => {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: $text-primary;
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+      }
     }
 
     .primary-button {
       background: linear-gradient(135deg, $accent-primary, $accent-secondary);
       color: $text-primary;
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+
+      &:hover:not(:disabled) {
+        box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4);
+      }
     }
   }
 }

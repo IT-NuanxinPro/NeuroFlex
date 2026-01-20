@@ -7,7 +7,23 @@
         </svg>
       </button>
       <h1 class="page-title">序列工作记忆</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="序列工作记忆"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- 配置界面 -->
     <div v-if="!isTraining && !showResult" class="config-screen">
@@ -149,12 +165,45 @@ import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
 import ButtonGroupSelect from '@/components/ButtonGroupSelect.vue'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 import { itemPool, itemCountOptions, speedOptions } from '@/config/sequence.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
+
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>记住物品的<strong>品类和顺序</strong>，然后按顺序回忆。</p>
+    <ul>
+      <li>展示阶段：依次展示物品，记住它们的品类和顺序</li>
+      <li>回忆阶段：从所有物品中按顺序选择刚才看到的</li>
+      <li>可以撤销上一次选择</li>
+      <li>选够数量后提交答案</li>
+    </ul>
+  `,
+  benefits: `
+    <p>序列工作记忆训练可以提升：</p>
+    <ul>
+      <li><strong>工作记忆</strong> - 短期记忆和信息保持</li>
+      <li><strong>顺序记忆</strong> - 记住信息的先后顺序</li>
+      <li><strong>注意力</strong> - 集中注意力观察</li>
+      <li><strong>信息编码</strong> - 有效编码和存储信息</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>展示时<em>专注观察</em>每个物品</li>
+      <li>可以在心里复述物品顺序</li>
+      <li>尝试将物品分组记忆</li>
+      <li>从少量物品开始，逐步增加难度</li>
+    </ul>
+  `
+}
 
 const itemCount = ref(parseInt(itemCountOptions[1].value)) // 默认9个
 const displaySpeed = ref('normal')
@@ -386,6 +435,27 @@ onUnmounted(() => {
     margin: 0;
     text-align: center;
   }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
+  }
 }
 
 .config-screen,
@@ -562,7 +632,7 @@ onUnmounted(() => {
 
 .recall-info {
   text-align: center;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg; // 从 xl 减小到 lg
   transition: opacity 0.3s ease;
 
   &.disabled {
@@ -570,14 +640,27 @@ onUnmounted(() => {
     pointer-events: none;
   }
 
+  @include mobile {
+    margin-bottom: $spacing-md; // 移动端进一步减小
+  }
+
   p {
     font-size: $font-lg;
     margin-bottom: $spacing-sm;
+    
+    @include mobile {
+      font-size: $font-base; // 移动端缩小字体
+      margin-bottom: $spacing-xs;
+    }
   }
   .recall-progress {
     font-size: $font-2xl;
     font-weight: $font-bold;
     color: $accent-primary;
+    
+    @include mobile {
+      font-size: $font-xl; // 移动端缩小字体
+    }
   }
 }
 
@@ -585,7 +668,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: $spacing-md;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg; // 从 xl 减小到 lg
   transition: opacity 0.3s ease;
 
   &.disabled {
@@ -595,6 +678,8 @@ onUnmounted(() => {
 
   @include mobile {
     grid-template-columns: repeat(3, 1fr);
+    gap: $spacing-sm; // 移动端减小间距
+    margin-bottom: $spacing-md; // 移动端进一步减小
   }
 
   .item-button {
@@ -604,6 +689,10 @@ onUnmounted(() => {
     padding: $spacing-md;
     text-align: center;
     transition: all $transition-base;
+
+    @include mobile {
+      padding: $spacing-sm; // 移动端减小内边距
+    }
 
     &:hover:not(.disabled) {
       background: rgba(255, 255, 255, 0.1);
@@ -616,10 +705,19 @@ onUnmounted(() => {
     .item-icon {
       font-size: 2.5rem;
       margin-bottom: $spacing-xs;
+      
+      @include mobile {
+        font-size: 2rem; // 移动端缩小图标
+        margin-bottom: 4px;
+      }
     }
     .item-name {
       font-size: $font-sm;
       font-weight: $font-medium;
+      
+      @include mobile {
+        font-size: $font-xs; // 移动端缩小文字
+      }
     }
   }
 }
@@ -627,7 +725,7 @@ onUnmounted(() => {
 .selected-sequence {
   @include glass-card;
   padding: $spacing-lg;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg; // 从 xl 减小到 lg
   transition: opacity 0.3s ease;
 
   &.disabled {
@@ -635,19 +733,39 @@ onUnmounted(() => {
     pointer-events: none;
   }
 
+  @include mobile {
+    padding: $spacing-md; // 移动端减小内边距
+    margin-bottom: $spacing-md; // 移动端进一步减小
+  }
+
   h3 {
     font-size: $font-base;
     margin-bottom: $spacing-md;
+    
+    @include mobile {
+      font-size: $font-sm; // 移动端缩小标题
+      margin-bottom: $spacing-sm;
+    }
   }
   .selected-items {
     display: flex;
     flex-wrap: wrap;
     gap: $spacing-sm;
+    
+    @include mobile {
+      gap: $spacing-xs; // 移动端减小间距
+    }
+    
     .selected-item {
       padding: $spacing-sm $spacing-md;
       background: rgba(0, 212, 255, 0.2);
       border-radius: $radius-md;
       font-size: $font-sm;
+      
+      @include mobile {
+        padding: $spacing-xs $spacing-sm; // 移动端减小内边距
+        font-size: $font-xs; // 移动端缩小字体
+      }
     }
   }
 }
@@ -662,6 +780,10 @@ onUnmounted(() => {
     pointer-events: none;
   }
 
+  @include mobile {
+    gap: $spacing-sm; // 移动端减小间距
+  }
+
   button {
     @include button-reset;
     @include click-feedback;
@@ -669,7 +791,14 @@ onUnmounted(() => {
     padding: $spacing-lg;
     border-radius: $radius-md;
     font-weight: $font-medium;
+    font-size: $font-base;
     transition: all $transition-base;
+    
+    @include mobile {
+      padding: $spacing-sm $spacing-md; // 移动端大幅减小内边距（高度）
+      font-size: $font-sm; // 移动端缩小字体
+    }
+    
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;

@@ -8,8 +8,24 @@
         </svg>
       </button>
       <h1 class="page-title">双侧神经协调</h1>
+      <button v-if="!isDrawing" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
       <button v-if="isDrawing" class="clear-button" @click="clearCanvas">重置</button>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="双侧神经协调"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- PC端禁用提示 -->
     <Modal 
@@ -134,6 +150,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import GameResult from '@/components/GameResult.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import Modal from '@/components/Modal.vue'
 import {trainingModes,taskTypes} from '@/config/mirror.js'
 
@@ -145,6 +162,38 @@ const isPC = ref(false)
 const showPCWarning = ref(false)
 const selectedMode = ref('mirror')
 const selectedTask = ref('trace')
+
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>这是一个<strong>双手协调训练</strong>游戏，需要在移动设备上使用多点触控。</p>
+    <ul>
+      <li>选择训练模式（镜像/平行/分离）</li>
+      <li>选择任务类型（描摹/自由）</li>
+      <li>双手同时在左右画板上绘制</li>
+      <li>保持双手运动的协调性</li>
+    </ul>
+  `,
+  benefits: `
+    <p>双侧神经协调训练可以有效提升：</p>
+    <ul>
+      <li><strong>左右脑协调</strong> - 增强大脑半球间的连接</li>
+      <li><strong>双侧运动控制</strong> - 提高双手独立操作能力</li>
+      <li><strong>神经可塑性</strong> - 促进大脑神经网络发展</li>
+      <li><strong>注意力分配</strong> - 训练同时处理多任务的能力</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>从<em>镜像模式</em>开始，逐步提升难度</li>
+      <li>保持双手运动速度一致</li>
+      <li>分离模式最具挑战性，需要更多练习</li>
+      <li>描摹模式可以帮助建立运动模式</li>
+    </ul>
+  `
+}
 
 const isDrawing = ref(false)
 const showResult = ref(false)
@@ -258,7 +307,7 @@ function initCanvas() {
 
 // 智能模版绘制系统
 function drawTemplates(w, h) {
-  const pad = 40
+  const pad = 20
   const midX = w / 2
   const midY = h / 2
   const size = Math.min(w, h) / 2 - pad
@@ -435,106 +484,172 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// 变量定义 (如果没有全局 SCSS 变量，这里作为 fallback)
-$bg-dark: #121212;
-$card-bg: #1e1e1e;
-$accent: #00d4ff;
-$text-main: #ffffff;
-$text-sub: #aaaaaa;
-
 .mirror-page {
   min-height: 100vh;
-  background-color: $bg-dark;
-  color: $text-main;
+  background: $bg-primary;
+  color: $text-primary;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  touch-action: none; // 禁止页面级滚动
+  touch-action: none;
 }
 
 // 头部样式
 .page-header {
-  height: 60px;
+  @include safe-area-padding(top);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  background: rgba(30, 30, 30, 0.8);
+  justify-content: center;
+  padding: $spacing-md $spacing-lg;
+  background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  z-index: 10;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  
+  .back-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(255, 255, 255, 0.05);
+    color: $text-primary;
+    @include flex-center;
+    position: absolute;
+    left: $spacing-lg;
+  }
   
   .page-title {
-    flex: 1;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: $font-xl;
+    font-weight: $font-semibold;
     margin: 0;
+    text-align: center;
   }
   
-  .back-button, .clear-button {
-    background: none;
-    border: none;
-    color: $text-main;
-    padding: 8px;
-    font-size: 14px;
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
-  
+
   .clear-button {
-    color: $accent;
-    font-weight: 500;
+    @include button-reset;
+    @include click-feedback;
+    position: absolute;
+    right: $spacing-lg;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-md;
+    background: rgba(255, 51, 102, 0.1);
+    border: 1px solid rgba(255, 51, 102, 0.3);
+    color: $accent-error;
+    font-size: $font-sm;
+    font-weight: $font-medium;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(255, 51, 102, 0.2);
+      border-color: $accent-error;
+    }
   }
 }
 
 // 配置界面样式
 .config-screen {
   flex: 1;
+  @include flex-center;
+  padding: calc($spacing-md + 60px) $spacing-lg $spacing-md;
   overflow-y: auto;
-  padding: 20px;
-  touch-action: auto; // 配置页允许滚动
+  @include custom-scrollbar;
+  touch-action: auto;
+
+  @include mobile {
+    padding: calc($spacing-md + 60px) $spacing-md $spacing-md;
+  }
   
   .config-card {
-    background: $card-bg;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    @include glass-card;
+    padding: $spacing-2xl;
+    max-width: 600px;
+    width: 100%;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    @include mobile {
+      padding: $fluid-spacing-lg;
+      max-width: 90vw;
+    }
   }
   
   .section-title {
-    font-size: 14px;
-    color: $text-sub;
-    margin-bottom: 12px;
+    font-size: $font-sm;
+    color: $text-secondary;
+    margin-bottom: $spacing-md;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-weight: $font-medium;
     
-    &.mt-6 { margin-top: 24px; }
+    &.mt-6 { 
+      margin-top: $spacing-xl; 
+    }
   }
   
   // 模式列表
   .mode-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: $spacing-sm;
   }
   
   .mode-item {
+    @include button-reset;
+    @include click-feedback;
     display: flex;
     align-items: center;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
-    border-radius: 12px;
-    padding: 16px;
-    color: $text-main;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: $radius-md;
+    padding: $spacing-md;
+    color: $text-primary;
     text-align: left;
-    transition: all 0.2s;
+    transition: all $transition-base;
     
     &.active {
       background: rgba(0, 212, 255, 0.1);
-      border-color: $accent;
+      border-color: $accent-primary;
+      box-shadow:
+        0 0 20px rgba(0, 212, 255, 0.3),
+        inset 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(0, 212, 255, 0.3);
     }
     
     .mode-icon {
-      font-size: 24px;
-      margin-right: 16px;
+      font-size: $font-2xl;
+      margin-right: $spacing-md;
+      flex-shrink: 0;
     }
     
     .mode-info {
@@ -543,19 +658,28 @@ $text-sub: #aaaaaa;
       .mode-header {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 4px;
-        .name { font-weight: 600; font-size: 16px; }
+        align-items: center;
+        margin-bottom: $spacing-xs;
+        
+        .name { 
+          font-weight: $font-semibold;
+          font-size: $font-base;
+        }
+        
         .stars {
-          color: #333;
-          font-size: 12px;
-          .filled { color: #ffb400; }
+          color: rgba(255, 255, 255, 0.2);
+          font-size: $font-sm;
+          
+          .filled { 
+            color: $accent-warning;
+          }
         }
       }
       
       .desc {
-        font-size: 12px;
-        color: $text-sub;
-        line-height: 1.3;
+        font-size: $font-sm;
+        color: $text-secondary;
+        line-height: 1.4;
       }
     }
   }
@@ -563,51 +687,91 @@ $text-sub: #aaaaaa;
   // 任务切换
   .task-tabs {
     display: flex;
-    background: rgba(0,0,0,0.2);
-    padding: 4px;
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: $spacing-xs;
+    border-radius: $radius-md;
+    gap: $spacing-xs;
     
     .task-tab {
+      @include button-reset;
+      @include click-feedback;
       flex: 1;
-      background: none;
-      border: none;
-      color: $text-sub;
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 8px;
+      background: transparent;
+      color: $text-secondary;
+      padding: $spacing-sm;
+      font-size: $font-sm;
+      font-weight: $font-medium;
+      border-radius: $radius-sm;
+      transition: all $transition-base;
       
       &.active {
-        background: $card-bg; // 或者 accent
-        color: $text-main;
-        font-weight: 500;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        background: rgba(255, 255, 255, 0.1);
+        color: $text-primary;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
     }
   }
   
   .hint-box {
-    margin-top: 20px;
-    padding: 12px;
+    margin-top: $spacing-lg;
+    padding: $spacing-md;
     background: rgba(0, 212, 255, 0.05);
-    border-radius: 8px;
-    color: $accent;
-    font-size: 12px;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: $radius-md;
+    color: $accent-primary;
+    font-size: $font-sm;
     text-align: center;
+    line-height: 1.5;
   }
   
   .start-button {
+    @include button-reset;
+    @include click-feedback;
     width: 100%;
-    margin-top: 30px;
-    padding: 16px;
-    background: linear-gradient(90deg, #00d4ff, #005bea);
-    border: none;
-    border-radius: 30px;
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-    
-    &:active { transform: scale(0.98); }
+    margin-top: $spacing-2xl;
+    padding: $spacing-lg;
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    border-radius: $radius-md;
+    color: $text-primary;
+    font-size: $font-lg;
+    font-weight: $font-bold;
+    box-shadow:
+      0 8px 24px rgba(0, 212, 255, 0.3),
+      0 0 40px rgba(0, 212, 255, 0.1);
+    transition: all $transition-base;
+    position: relative;
+    overflow: hidden;
+
+    @include mobile {
+      padding: $spacing-md;
+      font-size: $font-base;
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition:
+        width 0.6s,
+        height 0.6s;
+    }
+
+    &:hover {
+      box-shadow:
+        0 12px 32px rgba(0, 212, 255, 0.5),
+        0 0 60px rgba(0, 212, 255, 0.3);
+
+      &::before {
+        width: 300px;
+        height: 300px;
+      }
+    }
   }
 }
 
@@ -616,30 +780,43 @@ $text-sub: #aaaaaa;
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px;
+  padding: calc($spacing-md + 60px) $spacing-md $spacing-md;
+  
+  @include mobile {
+    padding: calc($spacing-md + 60px) $spacing-sm $spacing-sm;
+  }
   
   .instruction-banner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    color: $text-sub;
-    font-size: 12px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 8px;
-    margin-bottom: 10px;
+    @include flex-center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    color: $text-secondary;
+    font-size: $font-sm;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    margin-bottom: $spacing-md;
+    backdrop-filter: blur(10px);
+    
+    .icon {
+      font-size: $font-lg;
+    }
   }
   
   .canvas-container {
     flex: 1;
     display: flex;
-    background: #181818;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: $radius-lg;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     overflow: hidden;
-    touch-action: none; // 关键：禁止浏览器手势
+    touch-action: none;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
     
     .divider {
       width: 2px;
@@ -647,17 +824,30 @@ $text-sub: #aaaaaa;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: $spacing-md;
       z-index: 5;
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(0, 212, 255, 0.2),
+        transparent
+      );
       
       .line {
         width: 1px;
         flex: 1;
-        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(255, 255, 255, 0.15),
+          transparent
+        );
       }
+      
       .divider-icon {
-        font-size: 12px;
-        color: rgba(255,255,255,0.2);
+        font-size: $font-sm;
+        color: $accent-primary;
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
       }
     }
     
@@ -667,13 +857,15 @@ $text-sub: #aaaaaa;
       
       .panel-tag {
         position: absolute;
-        top: 10px;
-        left: 0; 
+        top: $spacing-md;
+        left: 0;
         right: 0;
         text-align: center;
-        font-size: 10px;
-        color: rgba(255,255,255,0.1);
+        font-size: $font-xs;
+        color: rgba(255, 255, 255, 0.2);
         text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: $font-semibold;
         pointer-events: none;
       }
       
@@ -690,25 +882,36 @@ $text-sub: #aaaaaa;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
+    padding: 0 $spacing-sm;
     
     .timer {
       font-family: monospace;
-      font-size: 20px;
-      color: $text-main;
-      background: rgba(255,255,255,0.05);
-      padding: 8px 16px;
-      border-radius: 8px;
+      font-size: $font-xl;
+      font-weight: $font-bold;
+      color: $accent-primary;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      padding: $spacing-sm $spacing-lg;
+      border-radius: $radius-md;
+      min-width: 80px;
+      text-align: center;
     }
     
     .finish-button {
-      background: $text-main;
-      color: $bg-dark;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 30px;
-      font-weight: 600;
-      box-shadow: 0 4px 12px rgba(255,255,255,0.2);
+      @include button-reset;
+      @include click-feedback;
+      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+      color: $text-primary;
+      padding: $spacing-sm $spacing-xl;
+      border-radius: $radius-md;
+      font-weight: $font-semibold;
+      font-size: $font-base;
+      box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+      transition: all $transition-base;
+
+      &:hover {
+        box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+      }
     }
   }
 }
@@ -716,24 +919,43 @@ $text-sub: #aaaaaa;
 // PC警告弹窗
 .pc-warning-content {
   text-align: center;
-  padding: 20px;
-  color: #333; // Modal内通常是白底黑字
+  padding: $spacing-xl;
+  color: $text-primary;
   
   .warning-icon {
     font-size: 48px;
-    margin-bottom: 16px;
+    margin-bottom: $spacing-lg;
   }
   
-  h2 { font-size: 20px; margin-bottom: 10px; }
-  .warning-text { color: #666; margin-bottom: 24px; line-height: 1.5; }
+  h2 { 
+    font-size: $font-xl;
+    font-weight: $font-bold;
+    margin-bottom: $spacing-md;
+    color: $text-primary;
+  }
+  
+  .warning-text { 
+    color: $text-secondary;
+    margin-bottom: $spacing-xl;
+    line-height: 1.6;
+    font-size: $font-base;
+  }
   
   .primary-button {
-    background: $accent;
-    color: #fff;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-size: 16px;
+    @include button-reset;
+    @include click-feedback;
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    color: $text-primary;
+    padding: $spacing-md $spacing-2xl;
+    border-radius: $radius-md;
+    font-size: $font-base;
+    font-weight: $font-semibold;
+    box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+    transition: all $transition-base;
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+    }
   }
 }
 </style>

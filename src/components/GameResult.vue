@@ -65,7 +65,17 @@
             :style="{ animationDelay: `${0.1 + index * 0.05}s` }"
           >
             <span class="stat-label mobile-text-nowrap">{{ stat.label }}</span>
-            <span class="stat-value mobile-text-nowrap" :class="stat.highlight ? 'highlight' : ''">
+            <span 
+              v-if="stat.isHtml" 
+              class="stat-value mobile-text-nowrap" 
+              :class="stat.highlight ? 'highlight' : ''"
+              v-html="stat.value"
+            ></span>
+            <span 
+              v-else
+              class="stat-value mobile-text-nowrap" 
+              :class="stat.highlight ? 'highlight' : ''"
+            >
               {{ stat.value }}
             </span>
           </div>
@@ -197,7 +207,7 @@ function handleOverlayClick() {
 .result-modal {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 600px; // 从 480px 增加到 600px
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.1) 0%,
@@ -207,27 +217,27 @@ function handleOverlayClick() {
   -webkit-backdrop-filter: blur(20px);
   border-radius: $radius-lg;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: $spacing-2xl $spacing-xl;
+  padding: $spacing-xl $spacing-lg;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   overflow: hidden;
   
-  // 限制最大高度，为后续内容预留空间
-  max-height: 85vh;
-  max-height: 85dvh;
+  // 增加最大高度，确保6个统计项都能显示
+  max-height: 90vh;
+  max-height: 90dvh;
 
   @include mobile {
     max-width: 90vw;
-    max-height: 80vh;
-    max-height: 80svh;
-    padding: $spacing-xl $spacing-lg;
+    max-height: 88vh;
+    max-height: 88svh;
+    padding: $spacing-lg $spacing-md;
     
-    // 超小屏幕进一步压缩
+    // 超小屏幕进一步优化
     @media (max-height: 640px) {
-      max-height: 75vh;
-      max-height: 75svh;
-      padding: $spacing-lg $spacing-md;
+      max-height: 85vh;
+      max-height: 85svh;
+      padding: $spacing-md $spacing-sm;
     }
   }
 }
@@ -375,27 +385,27 @@ function handleOverlayClick() {
 // 图标样式
 .result-icon-wrapper {
   @include flex-center;
-  margin-bottom: $spacing-lg;
+  margin-bottom: $spacing-md;
   
   @include mobile {
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-sm;
   }
 }
 
 .result-icon {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   @include flex-center;
   position: relative;
 
   @include mobile {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
     
     // 超小屏幕进一步缩小
     @media (max-height: 640px) {
-      width: 56px;
-      height: 56px;
+      width: 48px;
+      height: 48px;
     }
   }
 
@@ -495,9 +505,9 @@ function handleOverlayClick() {
 // 标题
 .result-title {
   text-align: center;
-  font-size: $font-3xl;
+  font-size: $font-2xl;
   font-weight: $font-bold;
-  margin: 0 0 $spacing-sm;
+  margin: 0 0 $spacing-xs;
   background: linear-gradient(135deg, $text-primary 0%, rgba(255, 255, 255, 0.7) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -507,31 +517,31 @@ function handleOverlayClick() {
   opacity: 0;
 
   @include mobile {
-    font-size: $font-2xl;
-    margin-bottom: $spacing-xs;
+    font-size: $font-xl;
+    margin-bottom: 4px;
     
     @media (max-height: 640px) {
-      font-size: $font-xl;
+      font-size: $font-lg;
     }
   }
 }
 
 .result-subtitle {
   text-align: center;
-  font-size: $font-base;
+  font-size: $font-sm;
   color: $text-secondary;
-  margin: 0 0 $spacing-xl;
+  margin: 0 0 $spacing-lg;
   animation: fade-in-up 0.5s ease-out forwards;
   animation-delay: 0.4s;
   opacity: 0;
 
   @include mobile {
-    font-size: $font-sm;
-    margin-bottom: $spacing-lg;
+    font-size: $font-xs;
+    margin-bottom: $spacing-md;
     
     @media (max-height: 640px) {
-      font-size: $font-xs;
-      margin-bottom: $spacing-md;
+      font-size: 11px;
+      margin-bottom: $spacing-sm;
     }
   }
 }
@@ -552,16 +562,22 @@ function handleOverlayClick() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-md;
-  margin-bottom: $spacing-xl;
+  margin-bottom: $spacing-lg;
+  padding: 0 $spacing-lg; // 增加左右边距，与按钮对齐
 
   @include mobile {
     grid-template-columns: 1fr;
     gap: $spacing-sm;
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-md;
+    padding: 0 $spacing-md; // 移动端左右边距
     
     @media (max-height: 640px) {
-      margin-bottom: $spacing-md;
+      margin-bottom: $spacing-sm;
       gap: $spacing-xs;
+    }
+    
+    @media (max-width: 360px) {
+      padding: 0 $spacing-sm;
     }
   }
 
@@ -569,7 +585,7 @@ function handleOverlayClick() {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: $spacing-lg;
+    padding: $spacing-md $spacing-lg;
     background: rgba(255, 255, 255, 0.05);
     border-radius: $radius-md;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -578,10 +594,10 @@ function handleOverlayClick() {
     opacity: 0;
 
     @include mobile {
-      padding: $spacing-md;
+      padding: $spacing-sm $spacing-md;
       
       @media (max-height: 640px) {
-        padding: $spacing-sm $spacing-md;
+        padding: 6px $spacing-sm;
       }
     }
 
@@ -606,15 +622,15 @@ function handleOverlayClick() {
     }
 
     .stat-value {
-      font-size: $font-xl;
+      font-size: $font-lg;
       font-weight: $font-bold;
       color: $text-primary;
 
       @include mobile {
-        font-size: $font-lg;
+        font-size: $font-base;
         
         @media (max-height: 640px) {
-          font-size: $font-base;
+          font-size: $font-sm;
         }
       }
 
@@ -665,18 +681,21 @@ function handleOverlayClick() {
 .result-actions {
   display: flex;
   gap: $spacing-md;
+  padding: 0 $spacing-lg; // 增加左右边距
   animation: fade-in-up 0.5s ease-out forwards;
   animation-delay: 0.5s;
   opacity: 0;
 
   @include mobile {
     gap: $spacing-sm;
+    padding: 0 $spacing-md; // 移动端左右边距
     flex-direction: column;
     
     // 超小屏幕横向排列但缩小间距
     @media (max-width: 360px) {
       flex-direction: row;
       gap: $spacing-xs;
+      padding: 0 $spacing-sm;
     }
   }
 
@@ -687,10 +706,10 @@ function handleOverlayClick() {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: $spacing-sm;
-    padding: $spacing-lg $spacing-xl;
+    gap: $spacing-xs;
+    padding: $spacing-md $spacing-lg;
     border-radius: $radius-md;
-    font-size: $font-base;
+    font-size: $font-sm;
     font-weight: $font-semibold;
     transition: all $transition-base;
     position: relative;
@@ -701,9 +720,9 @@ function handleOverlayClick() {
     text-overflow: ellipsis;
 
     @include mobile {
-      padding: $spacing-md $spacing-lg;
-      font-size: $font-sm;
-      gap: $spacing-xs;
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-xs;
+      gap: 4px;
       
       // 移动端文字优化
       span {
@@ -714,8 +733,8 @@ function handleOverlayClick() {
       
       // 超小屏幕进一步优化
       @media (max-width: 360px) {
-        padding: $spacing-sm;
-        font-size: $font-xs;
+        padding: $spacing-xs $spacing-sm;
+        font-size: 11px;
         min-width: 0; // 允许flex收缩
         
         span {
@@ -726,6 +745,15 @@ function handleOverlayClick() {
           width: 14px;
           height: 14px;
           flex-shrink: 0;
+        }
+      }
+      
+      @media (max-height: 640px) {
+        padding: 6px $spacing-sm;
+        
+        svg {
+          width: 14px;
+          height: 14px;
         }
       }
     }

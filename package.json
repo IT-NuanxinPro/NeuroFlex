@@ -20,6 +20,7 @@
     "android:build": "npm run build && npx cap copy android && npx cap build android"
   },
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^6.1.0",
     "gsap": "^3.12.5",
     "pinia": "^2.1.7",
     "vant": "^4.9.22",

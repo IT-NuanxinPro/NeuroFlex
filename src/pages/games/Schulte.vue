@@ -7,8 +7,24 @@
         </svg>
       </button>
       <h1 class="page-title">舒尔特方格</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
       <div v-if="isTraining" class="timer">{{ formatTime(elapsedTime) }}</div>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="舒尔特方格"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- 配置界面 -->
     <div v-if="!isTraining && !showResult" class="config-screen">
@@ -90,14 +106,14 @@
 
       <div class="progress-info">
         <p>
-          当前目标: <strong>{{ currentTarget }}</strong>
+          当前目标: <strong>{{ game.currentTarget }}</strong>
         </p>
         <p>
-          已完成: {{ showFeedback ? clickedNumbers.length : (mode === 'reverse' ? totalNumbers - currentTarget : currentTarget - 1) }} /
-          {{ totalNumbers }}
+          已完成: {{ showFeedback ? clickedNumbers.length : (mode === 'reverse' ? game.totalNumbers - game.currentTarget : game.currentTarget - 1) }} /
+          {{ game.totalNumbers }}
         </p>
         <p>
-          错误次数: <strong class="error-count">{{ wrongCount }}</strong>
+          错误次数: <strong class="error-count">{{ game.errorCount }}</strong>
         </p>
       </div>
     </div>
@@ -118,13 +134,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
+import { useSchulteGame } from '@/composables/useSchulteGame'
 import { gridSizes, modeOptions, timeLimitMap, settingsConfig } from '@/config/schulte.js'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 import { Switch as VanSwitch } from 'vant'
 import 'vant/lib/switch/style'
@@ -133,15 +151,49 @@ const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
 
-// 配置
-const gridSize = ref(gridSizes[1])
+// ==================== 配置相关 ====================
+const gridSize = ref(gridSizes[1]) // 默认 5×5
 const mode = ref('number')
-const showFeedback = ref(settingsConfig.options.highlightShown.default) // 使用配置的默认值
+const showFeedback = ref(settingsConfig.options.highlightShown.default)
 
-// 设置持久化相关
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>按照<strong>从小到大</strong>的顺序依次点击方格中的数字。</p>
+    <ul>
+      <li>选择方格尺寸（3×3 到 9×9）</li>
+      <li>选择训练模式（数字/多色/降序）</li>
+      <li>倒计时结束后开始训练</li>
+      <li>尽快按顺序点击所有数字</li>
+    </ul>
+  `,
+  benefits: `
+    <p>舒尔特方格是一种经典的<strong>注意力训练</strong>工具，可以有效提升：</p>
+    <ul>
+      <li><strong>视觉搜索能力</strong> - 快速定位目标</li>
+      <li><strong>注意力集中度</strong> - 保持专注不分心</li>
+      <li><strong>反应速度</strong> - 提高大脑处理速度</li>
+      <li><strong>眼脑协调</strong> - 增强视觉与认知配合</li>
+    </ul>
+  `,
+  tips: `
+    <p>训练技巧：</p>
+    <ul>
+      <li>保持<em>视线中心</em>不动，用余光扫描</li>
+      <li>从简单难度开始，逐步提升</li>
+      <li>每天训练10-15分钟效果最佳</li>
+      <li>多色模式可增加挑战性</li>
+    </ul>
+  `
+}
+
+// 游戏逻辑 Hook
+const game = useSchulteGame(gridSize)
+
+// 设置持久化
 const STORAGE_KEY = settingsConfig.options.highlightShown.storageKey
 
-// 检查 localStorage 是否可用
 function isLocalStorageAvailable() {
   try {
     const testKey = '__localStorage_test__'
@@ -154,96 +206,64 @@ function isLocalStorageAvailable() {
   }
 }
 
-// 从 localStorage 加载设置
 function loadSettings() {
-  if (!isLocalStorageAvailable()) {
-    console.warn('localStorage 不可用，使用默认设置')
-    return
-  }
-
+  if (!isLocalStorageAvailable()) return
+  
   try {
     const savedValue = localStorage.getItem(STORAGE_KEY)
     if (savedValue !== null) {
-      // 解析保存的值
-      const parsedValue = JSON.parse(savedValue)
-      showFeedback.value = parsedValue
+      showFeedback.value = JSON.parse(savedValue)
     }
   } catch (error) {
-    console.error('加载设置失败，使用默认值:', error)
-    // 如果数据损坏，清除并使用默认值
+    console.error('加载设置失败:', error)
     try {
       localStorage.removeItem(STORAGE_KEY)
     } catch (removeError) {
       console.error('清除损坏数据失败:', removeError)
     }
-    // 回退到默认值（已经在初始化时设置）
   }
 }
 
-// 保存设置到 localStorage
 function saveSettings() {
-  if (!isLocalStorageAvailable()) {
-    console.warn('localStorage 不可用，设置仅在会话期间有效')
-    return
-  }
-
+  if (!isLocalStorageAvailable()) return
+  
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(showFeedback.value))
   } catch (error) {
-    if (error.name === 'QuotaExceededError') {
-      console.error('localStorage 配额已满，无法保存设置:', error)
-    } else {
-      console.error('保存设置失败:', error)
-    }
-    // 继续使用内存状态
+    console.error('保存设置失败:', error)
   }
 }
 
-// 游戏状态
+// ==================== UI 状态 ====================
 const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
 const isTraining = ref(false)
 const showResult = ref(false)
 const grid = ref([])
-const clickedNumbers = ref([])
-const currentTarget = ref(1)
-const startTime = ref(0)
-const elapsedTime = ref(0)
-const finalTime = ref(0)
+const clickedNumbers = ref([]) // 用于视觉反馈
 const lastClickWrong = ref(false)
 const lastClickIndex = ref(-1)
-const reactionTimes = ref([])
-const wrongCount = ref(0)
+const elapsedTime = ref(0)
+const finalTime = ref(0)
 const isSuccess = ref(false)
 
 let timer = null
 
-// 倒计时设置
+// 倒计时
 const countdown = useGameCountdown({
   duration: 3,
   onComplete: startGame
-  // onTick 回调可选，暂不使用
 })
 
-const totalNumbers = computed(() => gridSize.value * gridSize.value)
+// ==================== 计算属性 ====================
+const isGameDisabled = computed(() => gameState.value === 'countdown')
 
-const isGameDisabled = computed(() => {
-  return gameState.value === 'countdown'
-})
-
-const averageReactionTime = computed(() => {
-  if (reactionTimes.value.length === 0) return 0
-  const sum = reactionTimes.value.reduce((a, b) => a + b, 0)
-  return Math.round(sum / reactionTimes.value.length)
-})
-
-// 结果弹窗相关
 const resultType = computed(() => (isSuccess.value ? 'success' : 'timeout'))
 
 const resultTitle = computed(() => (isSuccess.value ? '完成！' : '超时'))
 
 const resultSubtitle = computed(() => {
   if (isSuccess.value) {
-    return wrongCount.value === 0 ? '完美表现！' : '继续努力！'
+    return game.errorCount.value === 0 ? '完美表现！' : '继续努力！'
   }
   return '再试一次，你可以做得更好！'
 })
@@ -261,98 +281,105 @@ const resultStats = computed(() => [
   },
   {
     label: '平均反应',
-    value: `${averageReactionTime.value}ms`,
+    value: `${game.averageReactionTime.value}ms`,
+    highlight: true
+  },
+  {
+    label: '最快反应',
+    value: `${game.fastestReaction.value}ms`,
+    highlight: false
+  },
+  {
+    label: '准确率',
+    value: `${game.accuracy.value}%`,
     highlight: true
   },
   {
     label: '错误次数',
-    value: `${wrongCount.value}`,
+    value: `${game.errorCount.value}`,
     highlight: false
   }
 ])
 
+// ==================== 工具函数 ====================
 function getTimeLimit(size) {
   return timeLimitMap[size] || 30
+}
+
+function formatTime(ms) {
+  const seconds = Math.floor(ms / 1000)
+  const milliseconds = Math.floor((ms % 1000) / 100)
+  return `${seconds}.${milliseconds}s`
+}
+
+function getRandomColor() {
+  const colors = [
+    '#ff3366', '#00d4ff', '#00ff88', '#ffaa00',
+    '#ff66cc', '#7b2cbf', '#00ffff', '#ffff00'
+  ]
+  return colors[Math.floor(Math.random() * colors.length)]
 }
 
 function generateGrid() {
   // 根据模式生成数字序列
   let numbers
   if (mode.value === 'reverse') {
-    // 降序模式：从大到小
-    numbers = Array.from({ length: totalNumbers.value }, (_, i) => totalNumbers.value - i)
+    numbers = Array.from({ length: game.totalNumbers.value }, (_, i) => game.totalNumbers.value - i)
   } else {
-    // 正常模式和多色模式：从小到大
-    numbers = Array.from({ length: totalNumbers.value }, (_, i) => i + 1)
+    numbers = Array.from({ length: game.totalNumbers.value }, (_, i) => i + 1)
   }
   
-  // Fisher-Yates 洗牌算法
+  // Fisher-Yates 洗牌
   for (let i = numbers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[numbers[i], numbers[j]] = [numbers[j], numbers[i]]
   }
 
-  // 如果是多色模式，为每个数字分配颜色
+  // 多色模式
   if (mode.value === 'color') {
-    return numbers.map(num => ({
-      value: num,
-      color: getRandomColor()
-    }))
+    return numbers.map(num => ({ value: num, color: getRandomColor() }))
   }
 
   return numbers.map(num => ({ value: num, color: null }))
 }
 
-function getRandomColor() {
-  const colors = [
-    '#ff3366', // 红色
-    '#00d4ff', // 青色
-    '#00ff88', // 绿色
-    '#ffaa00', // 橙色
-    '#ff66cc', // 粉色
-    '#7b2cbf', // 紫色
-    '#00ffff', // 亮青色
-    '#ffff00' // 黄色
-  ]
-  return colors[Math.floor(Math.random() * colors.length)]
-}
-
+// ==================== 游戏流程 ====================
 function handleStartTraining() {
-  // 立即进入训练界面并显示宫格
   isTraining.value = true
   showResult.value = false
   grid.value = generateGrid()
-  wrongCount.value = 0
   clickedNumbers.value = []
+  lastClickWrong.value = false
   
-  // 根据模式设置初始目标
+  // 重置游戏逻辑
+  game.resetGame()
+  
+  // 根据模式设置初始目标（降序模式特殊处理）
   if (mode.value === 'reverse') {
-    currentTarget.value = totalNumbers.value // 降序模式从最大数字开始
-  } else {
-    currentTarget.value = 1 // 正常模式从1开始
+    game.currentTarget.value = game.totalNumbers.value
   }
   
-  reactionTimes.value = []
-  lastClickWrong.value = false
-
-  // 设置为倒计时状态
   gameState.value = 'countdown'
-
-  // 启动倒计时
   countdown.start()
 }
 
 function startGame() {
-  // 倒计时结束后，开始游戏
   gameState.value = 'active'
-  startTime.value = Date.now()
   elapsedTime.value = 0
-
+  
+  // 启动游戏逻辑
+  game.startGame()
+  
+  // 根据模式设置初始目标（降序模式特殊处理）
+  if (mode.value === 'reverse') {
+    game.currentTarget.value = game.totalNumbers.value
+  }
+  
   trainingStore.startTraining('schulte')
 
   // 开始计时
   timer = setInterval(() => {
-    elapsedTime.value = Date.now() - startTime.value
+    elapsedTime.value = Date.now() - game.timestamps.value[0]
 
     // 检查超时
     if (elapsedTime.value >= getTimeLimit(gridSize.value) * 1000) {
@@ -362,38 +389,32 @@ function startGame() {
 }
 
 function handleClick(num, index) {
-  if (num === currentTarget.value) {
-    // 正确点击
-    const reactionTime = Date.now() - startTime.value - clickedNumbers.value.length * 100
-    reactionTimes.value.push(reactionTime)
-
-    // 根据设置决定是否添加到已点击列表（控制绿色高亮）
+  // 使用 Hook 处理点击逻辑
+  const isCorrect = game.handleNumberClick(num)
+  
+  if (isCorrect) {
+    // 正确点击的视觉反馈
     if (showFeedback.value) {
       clickedNumbers.value.push(num)
     }
-
     lastClickWrong.value = false
 
-    // 根据模式更新目标
+    // 降序模式特殊处理
     if (mode.value === 'reverse') {
-      currentTarget.value-- // 降序模式递减
-      // 检查是否完成（降序模式到0结束）
-      if (currentTarget.value < 1) {
+      game.currentTarget.value--
+      if (game.currentTarget.value < 1) {
         endTraining(true)
       }
     } else {
-      currentTarget.value++ // 正常模式递增
-      // 检查是否完成（正常模式超过最大值结束）
-      if (currentTarget.value > totalNumbers.value) {
+      // 检查是否完成
+      if (game.isCompleted.value) {
         endTraining(true)
       }
     }
   } else {
-    // 错误点击 - 始终显示错误反馈
-    wrongCount.value++
+    // 错误点击的视觉反馈
     lastClickWrong.value = true
     lastClickIndex.value = index
-
     setTimeout(() => {
       lastClickWrong.value = false
     }, 400)
@@ -409,25 +430,23 @@ function endTraining(success) {
   gameState.value = 'completed'
   isTraining.value = false
   showResult.value = true
-  finalTime.value = elapsedTime.value
+  finalTime.value = game.totalTime.value || elapsedTime.value
   isSuccess.value = success
 
   trainingStore.endTraining()
 
-  // 保存训练记录
+  // 保存训练记录（使用 Hook 的统计数据）
   const score = success ? Math.max(0, 100 - Math.floor(finalTime.value / 1000)) : 0
   userStore.addTrainingRecord({
     moduleName: 'schulte',
     difficulty: `${gridSize.value}x${gridSize.value}`,
     score,
     duration: finalTime.value,
-    accuracy: (currentTarget.value - 1) / totalNumbers.value,
+    accuracy: game.accuracy.value / 100,
     details: {
       gridSize: gridSize.value,
       mode: mode.value,
-      reactionTimes: reactionTimes.value,
-      averageReactionTime: averageReactionTime.value,
-      wrongCount: wrongCount.value
+      ...game.gameStats.value // 使用完整的统计数据
     }
   })
 }
@@ -436,6 +455,7 @@ function resetTraining() {
   showResult.value = false
   isTraining.value = false
   gameState.value = 'idle'
+  game.resetGame()
 }
 
 function handleRetry() {
@@ -449,17 +469,11 @@ function handleClose() {
   goBack()
 }
 
-function formatTime(ms) {
-  const seconds = Math.floor(ms / 1000)
-  const milliseconds = Math.floor((ms % 1000) / 100)
-  return `${seconds}.${milliseconds}s`
-}
-
 function goBack() {
   router.back()
 }
 
-// 组件挂载时加载设置
+// ==================== 生命周期 ====================
 onMounted(() => {
   loadSettings()
 })
@@ -468,7 +482,6 @@ onUnmounted(() => {
   if (timer) {
     clearInterval(timer)
   }
-  // 清理倒计时
   countdown.cleanup()
 })
 </script>
@@ -515,6 +528,27 @@ onUnmounted(() => {
     font-weight: $font-semibold;
     margin: 0;
     text-align: center;
+  }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
 
   .timer {

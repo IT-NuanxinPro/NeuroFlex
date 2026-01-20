@@ -235,10 +235,16 @@ export function onSafeAreaChange(callback) {
   }
 }
 
+// 存储清理函数
+let apkCleanupFunctions = []
+let isAPKInitialized = false
+
 /**
  * 初始化APK环境适配
  */
 export function initAPKAdapter() {
+  if (isAPKInitialized) return
+  
   const deviceInfo = getDeviceInfo()
   
   // 添加设备信息到body类名
@@ -256,6 +262,15 @@ export function initAPKAdapter() {
     if (className && className.trim()) {
       document.body.classList.add(className)
     }
+  })
+  
+  // 清理函数：移除添加的类名
+  apkCleanupFunctions.push(() => {
+    classesToAdd.forEach(className => {
+      if (className && className.trim()) {
+        document.body.classList.remove(className)
+      }
+    })
   })
   
   // 设置CSS自定义属性
@@ -279,9 +294,21 @@ export function initAPKAdapter() {
     setNavigationBarColor('#0f0f1e')
   }
   
+  isAPKInitialized = true
   console.log('APK Adapter initialized:', deviceInfo)
   
   return deviceInfo
+}
+
+/**
+ * 清理APK适配器的所有资源
+ * 用于应用卸载或重新初始化时清理资源
+ */
+export function cleanupAPKAdapter() {
+  // 执行所有清理函数
+  apkCleanupFunctions.forEach(cleanup => cleanup())
+  apkCleanupFunctions = []
+  isAPKInitialized = false
 }
 
 /**

@@ -7,7 +7,23 @@
         </svg>
       </button>
       <h1 class="page-title">情景联想记忆</h1>
+      <button v-if="!isTraining" class="help-button" @click="showGuide = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2" />
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
     </header>
+
+    <!-- 游戏说明弹窗 -->
+    <GameGuide
+      :visible="showGuide"
+      title="情景联想记忆"
+      :how-to-play="guideContent.howToPlay"
+      :benefits="guideContent.benefits"
+      :tips="guideContent.tips"
+      @close="showGuide = false"
+    />
 
     <!-- 配置界面 -->
     <div v-if="!isTraining && !showResult" class="config-screen">
@@ -155,11 +171,44 @@ import { useTrainingStore } from '@/stores/training'
 import { useGameCountdown } from '@/composables/useGameCountdown'
 import { itemPool, itemCountOptions } from '@/config/memoryStory.js'
 import GameCountdown from '@/components/GameCountdown.vue'
+import GameGuide from '@/components/GameGuide.vue'
 import GameResult from '@/components/GameResult.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const trainingStore = useTrainingStore()
+
+// 游戏说明
+const showGuide = ref(false)
+const guideContent = {
+  howToPlay: `
+    <p>通过<strong>编故事</strong>的方式记住物品，然后从混合选项中选出正确的物品。</p>
+    <ul>
+      <li>记忆阶段：观察物品，构建联想故事（可选）</li>
+      <li>回忆阶段：从包含干扰项的选项中选出正确物品</li>
+      <li>不需要记住顺序，只需记住物品本身</li>
+      <li>选项位置完全打乱，避免位置记忆</li>
+    </ul>
+  `,
+  benefits: `
+    <p>情景联想记忆训练可以提升：</p>
+    <ul>
+      <li><strong>联想记忆</strong> - 通过故事增强记忆</li>
+      <li><strong>创造力</strong> - 构建生动的联想场景</li>
+      <li><strong>长期记忆</strong> - 有意义的记忆更持久</li>
+      <li><strong>抗干扰能力</strong> - 从干扰项中识别目标</li>
+    </ul>
+  `,
+  tips: `
+    <p>记忆三原则：</p>
+    <ul>
+      <li><strong>具象化</strong>：物品要有<em>颜色、款式</em>等具体特征</li>
+      <li><strong>强关联</strong>：物品之间要有<em>连贯的场景</em>关系</li>
+      <li><strong>加感官</strong>：场景要包含<em>触感、声音</em>等感官体验</li>
+      <li>故事越生动、越荒诞，记忆效果越好</li>
+    </ul>
+  `
+}
 
 // 配置
 const itemCount = ref(parseInt(itemCountOptions[0].value))
@@ -170,6 +219,7 @@ const isTraining = ref(false)
 const showResult = ref(false)
 const phase = ref('memorize') // 'memorize' | 'recall'
 const items = ref([])
+const recallOptions = ref([]) // 回忆阶段的选项（包含正确答案+干扰项）
 const userStory = ref('')
 const userRecall = ref([])
 const isSubmitted = ref(false)
@@ -187,7 +237,8 @@ const countdown = useGameCountdown({
 })
 
 const availableItems = computed(() => {
-  return itemPool.filter(item => !userRecall.value.find(r => r.name === item.name))
+  // 从回忆选项中过滤掉已选择的
+  return recallOptions.value.filter(item => !userRecall.value.find(r => r.name === item.name))
 })
 
 const isGameDisabled = computed(() => {
@@ -215,6 +266,28 @@ const resultStats = computed(() => [
 function generateItems() {
   const shuffled = [...itemPool].sort(() => Math.random() - 0.5)
   return shuffled.slice(0, itemCount.value)
+}
+
+function generateRecallOptions() {
+  // 生成回忆选项：原物品 + 3-5个干扰项
+  const distractorCount = Math.floor(Math.random() * 3) + 3 // 随机3-5个干扰项
+  
+  // 获取不在原物品中的其他物品作为干扰项
+  const distractors = itemPool
+    .filter(item => !items.value.find(i => i.name === item.name))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, distractorCount)
+  
+  // 合并所有选项
+  const allOptions = [...items.value, ...distractors]
+  
+  // 使用 Fisher-Yates 洗牌算法彻底打乱顺序
+  for (let i = allOptions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]]
+  }
+  
+  return allOptions
 }
 
 function handleStartTraining() {
@@ -247,6 +320,8 @@ function startGame() {
     if (remainingTime.value <= 0) {
       clearInterval(memoryTimer)
       memoryTimer = null
+      // 进入回忆阶段，生成回忆选项
+      recallOptions.value = generateRecallOptions()
       phase.value = 'recall'
     }
   }, 1000)
@@ -276,7 +351,7 @@ function submitRecall() {
     }
   }
 
-  // 计算顺序正确的数量
+  // 计算顺序正确的数量（仅供参考，不影响准确率）
   let correctOrderCount = 0
   for (let i = 0; i < items.value.length; i++) {
     if (userRecall.value[i]?.name === items.value[i].name) {
@@ -286,7 +361,8 @@ function submitRecall() {
 
   correctItems.value = correctItemCount
   correctOrder.value = correctOrderCount
-  accuracy.value = correctOrderCount / items.value.length
+  // 准确率基于物品正确数，不考虑顺序
+  accuracy.value = correctItemCount / items.value.length
 
   setTimeout(() => {
     endTraining()
@@ -326,6 +402,7 @@ function resetTraining() {
   showResult.value = false
   isTraining.value = false
   gameState.value = 'idle'
+  recallOptions.value = [] // 清空回忆选项
   if (memoryTimer) {
     clearInterval(memoryTimer)
     memoryTimer = null
@@ -405,6 +482,27 @@ onUnmounted(() => {
     font-weight: $font-semibold;
     margin: 0;
     text-align: center;
+  }
+
+  .help-button {
+    @include button-reset;
+    @include click-feedback;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $accent-primary;
+    @include flex-center;
+    position: absolute;
+    right: $spacing-lg;
+    transition: all $transition-base;
+
+    &:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: $accent-primary;
+      transform: scale(1.1);
+    }
   }
 }
 
@@ -520,12 +618,12 @@ onUnmounted(() => {
   }
 
   h3 {
-    font-size: $font-sm;
+    font-size: $font-base; // 从 sm 增大到 base
     margin-bottom: $spacing-sm;
     color: $accent-primary;
 
     @include mobile {
-      font-size: $font-xs;
+      font-size: $font-sm; // 从 xs 增大到 sm
       margin-bottom: $spacing-xs;
     }
   }
@@ -537,11 +635,11 @@ onUnmounted(() => {
 
     li {
       padding: $spacing-xs 0;
-      font-size: $font-xs;
-      line-height: 1.4;
+      font-size: $font-sm; // 从 xs 增大到 sm
+      line-height: 1.5; // 从 1.4 增加到 1.5
 
       @include mobile {
-        font-size: 10px;
+        font-size: $font-xs; // 从 10px 增大到 xs
       }
 
       strong {
@@ -551,27 +649,27 @@ onUnmounted(() => {
   }
 
   .example {
-    font-size: 10px;
+    font-size: $font-xs; // 从 10px 增大到 xs
     color: $text-secondary;
     margin-bottom: $spacing-xs;
 
     @include mobile {
-      font-size: 9px;
+      font-size: 11px; // 从 9px 增大到 11px
     }
   }
 
   .example-story {
-    font-size: 10px;
+    font-size: $font-xs; // 从 10px 增大到 xs
     color: $text-secondary;
     font-style: italic;
-    line-height: 1.5;
+    line-height: 1.6; // 增加行高，更易读
 
     @include mobile {
-      font-size: 9px;
+      font-size: 11px; // 从 9px 增大到 11px
     }
 
     em {
-      color: $accent-primary;
+      color: $accent-primary; // 强调文字颜色更明显
       font-style: normal;
     }
   }
@@ -613,29 +711,53 @@ onUnmounted(() => {
   flex-direction: column;
   padding: calc($spacing-lg + 60px) $spacing-md $spacing-md;
   gap: $spacing-sm;
-  overflow: hidden;
+  overflow-y: auto; // 允许滚动
+  overflow-x: hidden;
   @include custom-scrollbar;
   position: relative;
   min-height: 0;
+  
+  @include mobile {
+    padding: calc($spacing-md + 60px) $spacing-sm $spacing-sm; // 移动端减小内边距
+    gap: $spacing-xs; // 移动端减小间距
+  }
 }
 
 .phase-title {
   text-align: center;
+  margin-bottom: $spacing-md; // 添加底部间距控制
+
+  @include mobile {
+    margin-bottom: $spacing-sm; // 移动端减小间距
+  }
 
   h2 {
     font-size: $font-xl;
     margin-bottom: $spacing-sm;
+    
+    @include mobile {
+      font-size: $font-lg; // 移动端缩小标题
+      margin-bottom: $spacing-xs;
+    }
   }
 
   p {
     font-size: $font-lg;
     color: $text-secondary;
+    
+    @include mobile {
+      font-size: $font-base; // 移动端缩小字体
+    }
   }
 
   .timer {
     font-size: $font-2xl;
     font-weight: $font-bold;
     color: $accent-warning;
+    
+    @include mobile {
+      font-size: $font-xl; // 移动端缩小字体
+    }
   }
 }
 
@@ -643,6 +765,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: $spacing-md;
+  margin-bottom: $spacing-lg; // 添加底部间距
   transition: opacity 0.3s ease;
 
   &.disabled {
@@ -650,11 +773,21 @@ onUnmounted(() => {
     pointer-events: none;
   }
 
+  @include mobile {
+    grid-template-columns: repeat(3, 1fr); // 移动端固定3列
+    gap: $spacing-xs; // 移动端减小间距
+    margin-bottom: $spacing-md;
+  }
+
   .item-card {
     @include glass-card;
     padding: $spacing-lg;
     text-align: center;
     position: relative;
+
+    @include mobile {
+      padding: $spacing-sm $spacing-xs; // 移动端大幅减小内边距
+    }
 
     .item-number {
       position: absolute;
@@ -668,16 +801,33 @@ onUnmounted(() => {
       font-size: $font-xs;
       font-weight: $font-bold;
       @include flex-center;
+      
+      @include mobile {
+        width: 18px; // 移动端缩小序号
+        height: 18px;
+        font-size: 10px;
+        top: 4px;
+        left: 4px;
+      }
     }
 
     .item-icon {
       font-size: 3rem;
       margin-bottom: $spacing-sm;
+      
+      @include mobile {
+        font-size: 1.8rem; // 移动端进一步缩小图标
+        margin-bottom: 4px;
+      }
     }
 
     .item-name {
       font-size: $font-base;
       font-weight: $font-medium;
+      
+      @include mobile {
+        font-size: 11px; // 移动端缩小文字
+      }
     }
   }
 }
@@ -690,10 +840,19 @@ onUnmounted(() => {
     pointer-events: none;
   }
 
+  @include mobile {
+    margin-bottom: $spacing-sm; // 移动端减小底部间距
+  }
+
   label {
     display: block;
     font-weight: $font-medium;
     margin-bottom: $spacing-sm;
+    
+    @include mobile {
+      font-size: $font-sm; // 移动端缩小标签
+      margin-bottom: $spacing-xs;
+    }
   }
 
   .story-textarea {
@@ -706,6 +865,12 @@ onUnmounted(() => {
     color: $text-primary;
     font-size: $font-base;
     resize: vertical;
+
+    @include mobile {
+      min-height: 80px; // 移动端减小高度
+      padding: $spacing-sm; // 移动端减小内边距
+      font-size: $font-sm; // 移动端缩小字体
+    }
 
     &:focus {
       outline: none;
@@ -722,6 +887,13 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: $spacing-md;
+  margin-bottom: $spacing-lg; // 添加底部间距
+
+  @include mobile {
+    grid-template-columns: repeat(3, 1fr); // 移动端固定3列
+    gap: $spacing-xs; // 移动端减小间距
+    margin-bottom: $spacing-md;
+  }
 
   .recall-button {
     @include button-reset;
@@ -730,6 +902,10 @@ onUnmounted(() => {
     padding: $spacing-lg;
     text-align: center;
     transition: all $transition-base;
+
+    @include mobile {
+      padding: $spacing-sm $spacing-xs; // 移动端大幅减小内边距
+    }
 
     &:hover:not(.disabled) {
       background: rgba(255, 255, 255, 0.1);
@@ -744,11 +920,20 @@ onUnmounted(() => {
     .item-icon {
       font-size: 3rem;
       margin-bottom: $spacing-sm;
+      
+      @include mobile {
+        font-size: 1.8rem; // 移动端进一步缩小图标
+        margin-bottom: 4px;
+      }
     }
 
     .item-name {
       font-size: $font-sm;
       font-weight: $font-medium;
+      
+      @include mobile {
+        font-size: 11px; // 移动端缩小文字
+      }
     }
   }
 }
@@ -756,16 +941,31 @@ onUnmounted(() => {
 .selected-sequence {
   @include glass-card;
   padding: $spacing-lg;
+  margin-bottom: $spacing-lg; // 添加底部间距
+
+  @include mobile {
+    padding: $spacing-md; // 移动端减小内边距
+    margin-bottom: $spacing-md;
+  }
 
   h3 {
     font-size: $font-base;
     margin-bottom: $spacing-md;
+    
+    @include mobile {
+      font-size: $font-sm; // 移动端缩小标题
+      margin-bottom: $spacing-sm;
+    }
   }
 
   .selected-items {
     display: flex;
     flex-wrap: wrap;
     gap: $spacing-sm;
+
+    @include mobile {
+      gap: $spacing-xs; // 移动端减小间距
+    }
 
     .selected-item {
       display: flex;
@@ -776,6 +976,12 @@ onUnmounted(() => {
       border-radius: $radius-md;
       font-size: $font-sm;
 
+      @include mobile {
+        padding: $spacing-xs $spacing-sm; // 移动端减小内边距
+        font-size: $font-xs; // 移动端缩小字体
+        gap: 4px;
+      }
+
       .item-number {
         width: 20px;
         height: 20px;
@@ -785,10 +991,20 @@ onUnmounted(() => {
         font-size: $font-xs;
         font-weight: $font-bold;
         @include flex-center;
+        
+        @include mobile {
+          width: 16px; // 移动端缩小序号
+          height: 16px;
+          font-size: 10px;
+        }
       }
 
       .item-icon {
         font-size: 1.2rem;
+        
+        @include mobile {
+          font-size: 1rem; // 移动端缩小图标
+        }
       }
     }
   }
@@ -798,6 +1014,10 @@ onUnmounted(() => {
   display: flex;
   gap: $spacing-md;
 
+  @include mobile {
+    gap: $spacing-sm; // 移动端减小间距
+  }
+
   button {
     @include button-reset;
     @include click-feedback;
@@ -805,6 +1025,12 @@ onUnmounted(() => {
     padding: $spacing-lg;
     border-radius: $radius-md;
     font-weight: $font-medium;
+    font-size: $font-base;
+
+    @include mobile {
+      padding: $spacing-sm $spacing-md; // 移动端减小内边距（高度）
+      font-size: $font-sm; // 移动端缩小字体
+    }
 
     &:disabled {
       opacity: 0.5;
