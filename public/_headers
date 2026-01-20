@@ -11,6 +11,7 @@
   Pragma: no-cache
   Expires: 0
   X-Accel-Expires: 0
+  Content-Type: text/html; charset=utf-8
 
 # 主页面特殊处理
 /index.html
@@ -18,17 +19,33 @@
   Pragma: no-cache
   Expires: 0
   X-Accel-Expires: 0
+  Content-Type: text/html; charset=utf-8
 
-# JavaScript 和 CSS 文件不缓存（微信浏览器经常缓存这些）
+# JavaScript 文件 - 确保正确的 MIME 类型
 /*.js
   Cache-Control: no-cache, no-store, must-revalidate, max-age=0
   Pragma: no-cache
   Expires: 0
+  Content-Type: application/javascript; charset=utf-8
 
+/assets/*.js
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  Content-Type: application/javascript; charset=utf-8
+
+# CSS 文件
 /*.css
   Cache-Control: no-cache, no-store, must-revalidate, max-age=0
   Pragma: no-cache
   Expires: 0
+  Content-Type: text/css; charset=utf-8
+
+/assets/*.css
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+  Content-Type: text/css; charset=utf-8
 
 # 图片和字体可以长期缓存
 /*.png

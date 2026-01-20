@@ -1,0 +1,23 @@
+# Cloudflare Pages SPA 路由配置
+# 所有非文件请求都重定向到 index.html，让 Vue Router 处理
+
+# 静态资源直接返回
+/assets/*  200
+/*.js      200
+/*.css     200
+/*.png     200
+/*.jpg     200
+/*.jpeg    200
+/*.gif     200
+/*.svg     200
+/*.ico     200
+/*.woff    200
+/*.woff2   200
+/*.ttf     200
+/*.eot     200
+/*.json    200
+/*.xml     200
+/*.txt     200
+
+# 所有其他请求返回 index.html（SPA 路由）
+/*  /index.html  200
