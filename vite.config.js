@@ -111,6 +111,10 @@ export default defineConfig({
     cssCodeSplit: true,
     rollupOptions: {
       output: {
+        // 添加版本号到文件名，避免缓存
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
           'gsap-vendor': ['gsap']

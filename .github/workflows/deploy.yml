@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整的 git 历史
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,13 +47,13 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          # 添加时间戳到构建中，避免缓存
+          VITE_BUILD_TIME: ${{ github.run_number }}
 
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: neuroflex
-          directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+          command: pages deploy dist --project-name=neuroflex --branch=main --commit-dirty=true
