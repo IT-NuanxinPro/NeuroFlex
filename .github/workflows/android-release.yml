@@ -52,18 +52,13 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Decode keystore
+      - name: Setup signing
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/neuroflex.keystore
-
-      - name: Create keystore.properties
-        run: |
-          cat > android/keystore.properties << EOF
-          storeFile=neuroflex.keystore
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=neuroflex
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          # 使用debug keystore进行签名（生产环境应使用正式keystore）
+          echo "MYAPP_RELEASE_STORE_FILE=debug.keystore" >> android/gradle.properties
+          echo "MYAPP_RELEASE_STORE_PASSWORD=android" >> android/gradle.properties
+          echo "MYAPP_RELEASE_KEY_ALIAS=androiddebugkey" >> android/gradle.properties
+          echo "MYAPP_RELEASE_KEY_PASSWORD=android" >> android/gradle.properties
 
       - name: Build Release APK
         working-directory: android
