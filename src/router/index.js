@@ -12,7 +12,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
-    meta: { 
+    meta: {
       title: '登录 - NeuroFlex',
       requiresGuest: true // 只有未登录用户可以访问
     }
@@ -21,7 +21,7 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: () => import('@/pages/Register.vue'),
-    meta: { 
+    meta: {
       title: '注册 - NeuroFlex',
       requiresGuest: true // 只有未登录用户可以访问
     }
@@ -29,6 +29,7 @@ const routes = [
   {
     path: '/main',
     component: TabLayout,
+    redirect: '/main/home',
     children: [
       {
         path: 'home',
@@ -40,8 +41,8 @@ const routes = [
         path: 'record',
         name: 'Record',
         component: () => import('@/pages/Record.vue'),
-        meta: { 
-          title: '训练记录', 
+        meta: {
+          title: '训练记录',
           depth: 1,
           requiresAuth: true // 需要登录才能访问
         }
@@ -56,8 +57,8 @@ const routes = [
         path: 'profile',
         name: 'Profile',
         component: () => import('@/pages/Profile.vue'),
-        meta: { 
-          title: '个人中心', 
+        meta: {
+          title: '个人中心',
           depth: 1,
           requiresAuth: true // 需要登录才能访问
         }
@@ -130,22 +131,22 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // 更新页面标题
   document.title = to.meta.title || 'NeuroFlex'
-  
+
   // 初始化认证服务（如果还没有初始化）
   const { initialize, isLoggedIn, isInitialized } = useAuth()
-  
+
   try {
     if (!isInitialized.value) {
       await initialize()
     }
-    
+
     // 检查是否只允许访客访问（如登录、注册页面）
     if (to.meta.requiresGuest && isLoggedIn.value) {
       // 已登录用户访问登录/注册页面，重定向到首页
       next({ name: 'Home' })
       return
     }
-    
+
     // 对于需要认证的页面，不强制跳转，而是在页面内显示登录提示
     // 这样用户可以以游客身份浏览大部分内容
     next()
