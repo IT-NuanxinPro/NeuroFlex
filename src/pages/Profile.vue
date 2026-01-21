@@ -10,12 +10,7 @@
       <div v-if="!isLoggedIn" class="guest-mode">
         <div class="guest-card">
           <div class="avatar-section">
-            <UserAvatar
-              :src="null"
-              :size="100"
-              :clickable="true"
-              @click="goToLogin"
-            />
+            <UserAvatar :src="null" :size="100" :clickable="true" @click="goToLogin" />
             <div class="login-hint">点击头像登录</div>
           </div>
 
@@ -178,7 +173,7 @@
         <div class="popup-header">
           <h3 class="popup-title">编辑资料</h3>
         </div>
-        
+
         <div class="popup-body input-keyboard-fix">
           <van-form @submit="handleSaveName">
             <van-cell-group inset>
@@ -194,11 +189,11 @@
                 @keyup.enter="handleSaveName"
               />
             </van-cell-group>
-            
+
             <div class="popup-actions">
-              <van-button 
-                block 
-                type="primary" 
+              <van-button
+                block
+                type="primary"
                 native-type="submit"
                 :loading="saving"
                 loading-text="保存中..."
@@ -218,7 +213,13 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useAuth } from '@/composables/useAuth.js'
-import { Popup as VanPopup, Form as VanForm, Field as VanField, CellGroup as VanCellGroup, Button as VanButton } from 'vant'
+import {
+  Popup as VanPopup,
+  Form as VanForm,
+  Field as VanField,
+  CellGroup as VanCellGroup,
+  Button as VanButton
+} from 'vant'
 import 'vant/lib/popup/style'
 import 'vant/lib/form/style'
 import 'vant/lib/field/style'
@@ -289,13 +290,13 @@ async function handleSaveName() {
   if (!editedName.value.trim()) {
     return false
   }
-  
+
   saving.value = true
-  
+
   try {
     // 模拟保存延迟，提供更好的用户反馈
     await new Promise(resolve => setTimeout(resolve, 500))
-    
+
     userStore.updateProfile({ name: editedName.value.trim() })
     showEditModal.value = false
   } catch (error) {
@@ -427,7 +428,7 @@ function clearHistory() {
   padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
   @include custom-scrollbar;
   min-height: 0; // 重要：让flex子元素可以收缩
-  
+
   // PC端布局调整
   &.pc-layout {
     padding: $spacing-lg;
@@ -437,19 +438,25 @@ function clearHistory() {
 
 .profile-card {
   @include glass-card;
-  padding: $spacing-xl;
-  margin-bottom: $spacing-lg;
+  padding: $spacing-2xl;
+  margin-bottom: $spacing-xl;
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
+  gap: $spacing-2xl;
 
   @media (max-width: $breakpoint-sm) {
     flex-direction: column;
     text-align: center;
+    padding: $spacing-xl;
+    gap: $spacing-lg;
   }
 
   .avatar-section {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
 
     @media (max-width: $breakpoint-sm) {
       display: flex;
@@ -467,15 +474,28 @@ function clearHistory() {
   }
 
   .username {
-    font-size: $font-xl;
+    font-size: $font-2xl;
     font-weight: $font-semibold;
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    @media (max-width: $breakpoint-sm) {
+      font-size: $font-xl;
+    }
   }
 
   .join-date {
     color: $text-secondary;
-    font-size: $font-sm;
-    margin-bottom: $spacing-md;
+    font-size: $font-base;
+    margin-bottom: $spacing-lg;
+
+    @media (max-width: $breakpoint-sm) {
+      font-size: $font-sm;
+      margin-bottom: $spacing-md;
+    }
   }
 
   .edit-button {
@@ -484,18 +504,24 @@ function clearHistory() {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: $spacing-md $spacing-lg;
+    border-radius: $radius-lg;
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    border: none;
     color: $text-primary;
-    font-size: $font-sm;
-    font-weight: $font-medium;
+    font-size: $font-base;
+    font-weight: $font-semibold;
     transition: all $transition-base;
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: $accent-primary;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 212, 255, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
     }
   }
 }
@@ -544,7 +570,7 @@ function clearHistory() {
         font-weight: $font-semibold;
         margin-bottom: $spacing-xs;
         color: $text-secondary;
-        
+
         @include mobile {
           font-size: $font-lg;
         }
@@ -554,7 +580,7 @@ function clearHistory() {
         color: $text-tertiary;
         font-size: $font-sm;
         margin-bottom: $spacing-lg;
-        
+
         @include mobile {
           font-size: $font-sm;
           margin-bottom: $spacing-md;
@@ -579,7 +605,7 @@ function clearHistory() {
       font-weight: $font-semibold;
       margin-bottom: $spacing-md;
       color: $text-primary;
-      
+
       @include mobile {
         font-size: $font-base;
         margin-bottom: $spacing-sm;
@@ -601,7 +627,7 @@ function clearHistory() {
         display: flex;
         align-items: center;
         gap: $spacing-md;
-        
+
         @include mobile {
           padding: $spacing-md;
           gap: $spacing-sm;
@@ -610,7 +636,7 @@ function clearHistory() {
         .feature-icon {
           font-size: $font-xl;
           flex-shrink: 0;
-          
+
           @include mobile {
             font-size: $font-lg;
           }
@@ -624,7 +650,7 @@ function clearHistory() {
             margin-bottom: $spacing-xs;
             color: $text-primary;
             font-size: $font-base;
-            
+
             @include mobile {
               font-size: $font-sm;
               margin-bottom: 2px;
@@ -634,7 +660,7 @@ function clearHistory() {
           .feature-desc {
             font-size: $font-sm;
             color: $text-secondary;
-            
+
             @include mobile {
               font-size: $font-xs;
             }
@@ -656,11 +682,11 @@ function clearHistory() {
   font-weight: $font-medium;
   font-size: $font-sm;
   transition: all $transition-base;
-  
+
   @include mobile {
     padding: $spacing-sm $spacing-md;
     font-size: $font-sm;
-    
+
     svg {
       width: 16px;
       height: 16px;
@@ -673,7 +699,11 @@ function clearHistory() {
     color: $text-primary;
 
     &:hover {
-      background: linear-gradient(135deg, darken($accent-primary, 5%), darken($accent-secondary, 5%));
+      background: linear-gradient(
+        135deg,
+        darken($accent-primary, 5%),
+        darken($accent-secondary, 5%)
+      );
       transform: translateY(-1px);
     }
   }
@@ -713,11 +743,13 @@ function clearHistory() {
 
   .user-actions {
     display: flex;
-    gap: $spacing-md;
+    gap: $spacing-lg;
     flex-wrap: wrap;
+    margin-top: $spacing-lg;
 
     @media (max-width: $breakpoint-sm) {
       justify-content: center;
+      margin-top: $spacing-md;
     }
   }
 
@@ -727,18 +759,28 @@ function clearHistory() {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-md;
+    padding: $spacing-md $spacing-lg;
+    border-radius: $radius-lg;
     background: rgba(255, 51, 102, 0.1);
     border: 1px solid rgba(255, 51, 102, 0.2);
     color: $accent-error;
-    font-size: $font-sm;
-    font-weight: $font-medium;
+    font-size: $font-base;
+    font-weight: $font-semibold;
     transition: all $transition-base;
 
     &:hover {
       background: rgba(255, 51, 102, 0.2);
       border-color: $accent-error;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: $breakpoint-sm) {
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-sm;
     }
   }
 }
@@ -751,7 +793,7 @@ function clearHistory() {
     font-weight: $font-semibold;
     margin-bottom: $spacing-md;
     color: $text-primary;
-    
+
     @include mobile {
       font-size: $font-base;
       margin-bottom: $spacing-sm;
@@ -761,20 +803,19 @@ function clearHistory() {
 
 .stats-grid {
   display: grid;
-  gap: $spacing-md;
-  
+  gap: $spacing-lg;
+
   // 移动端和APK环境使用三列方格布局
   @include mobile {
     grid-template-columns: repeat(3, 1fr);
     gap: $spacing-sm;
   }
-  
+
   // PC端也使用三列方格布局
   @media (min-width: $breakpoint-lg) {
     grid-template-columns: repeat(3, 1fr);
-    gap: $spacing-lg;
   }
-  
+
   // 超小屏幕适配
   @media (max-width: 360px) {
     gap: $spacing-xs;
@@ -783,69 +824,75 @@ function clearHistory() {
 
 .stat-item {
   @include glass-card;
-  padding: $spacing-lg;
+  padding: $spacing-xl;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
   transition: all $transition-base;
-  
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+
   // 所有设备都使用方格布局（上下结构）
-  min-height: 100px;
-  aspect-ratio: 1; // 保持方形
-  
+  min-height: 110px;
+  aspect-ratio: 1;
+
   // 移动端调整
   @include mobile {
     padding: $spacing-md;
     min-height: 80px;
-    
-    // 超小屏幕进一步压缩
+
     @media (max-width: 360px) {
       padding: $spacing-sm;
       min-height: 70px;
     }
   }
-  
+
   // PC端调整
   @media (min-width: $breakpoint-lg) {
-    padding: $spacing-xl;
-    min-height: 120px;
+    padding: $spacing-2xl;
+    min-height: 140px;
   }
-  
+
   // 悬停效果（仅桌面端）
   @include hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 212, 255, 0.2);
+    transform: translateY(-4px);
+    border-color: rgba(0, 212, 255, 0.3);
+    background: rgba(0, 212, 255, 0.05);
+    box-shadow: 0 12px 32px rgba(0, 212, 255, 0.25);
   }
-  
+
   // 移动端点击反馈
   @include mobile {
     &:active {
-      transform: scale(0.98);
+      transform: scale(0.96);
     }
   }
 
   .stat-value {
     font-size: $font-2xl;
     font-weight: $font-bold;
-    color: $accent-primary;
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     line-height: 1.2;
     margin-bottom: $spacing-xs;
-    
+
     // 移动端调整
     @include mobile {
       font-size: $font-xl;
-      
+
       @media (max-width: 360px) {
         font-size: $font-lg;
         margin-bottom: 2px;
       }
     }
-    
+
     // PC端调整
     @media (min-width: $breakpoint-lg) {
-      font-size: $font-3xl;
+      font-size: $font-4xl;
       margin-bottom: $spacing-sm;
     }
   }
@@ -855,20 +902,20 @@ function clearHistory() {
     color: $text-secondary;
     font-weight: $font-medium;
     line-height: 1.2;
-    white-space: nowrap; // 防止文字换行
-    
+    white-space: nowrap;
+
     // 移动端调整
     @include mobile {
       font-size: $font-xs;
-      
+
       @media (max-width: 360px) {
         font-size: 11px;
       }
     }
-    
+
     // PC端调整
     @media (min-width: $breakpoint-lg) {
-      font-size: $font-base;
+      font-size: $font-lg;
     }
   }
 }
@@ -879,11 +926,11 @@ function clearHistory() {
   .stat-item {
     // APK 环境下使用更紧凑的布局
     min-height: 75px;
-    
+
     @media (max-width: 360px) {
       min-height: 65px;
     }
-    
+
     .stat-value {
       @media (max-width: 360px) {
         font-size: $font-base;
@@ -898,7 +945,7 @@ function clearHistory() {
     font-weight: $font-semibold;
     margin-bottom: $spacing-md;
     color: $text-primary;
-    
+
     @include mobile {
       font-size: $font-base;
       margin-bottom: $spacing-sm;
@@ -908,15 +955,15 @@ function clearHistory() {
 
 .action-buttons {
   display: grid;
-  gap: $spacing-md;
-  
+  gap: $spacing-lg;
+
   // PC端使用原来的两列布局
   grid-template-columns: repeat(2, 1fr);
 
   // 移动端改为单列布局，按钮更紧凑
   @include mobile {
     grid-template-columns: 1fr;
-    gap: $spacing-sm;
+    gap: $spacing-md;
   }
 }
 
@@ -927,27 +974,28 @@ function clearHistory() {
   align-items: center;
   justify-content: center;
   gap: $spacing-sm;
-  padding: $spacing-lg;
-  border-radius: $radius-md;
+  padding: $spacing-xl;
+  border-radius: $radius-lg;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: $text-primary;
-  font-weight: $font-medium;
+  font-weight: $font-semibold;
+  font-size: $font-base;
   transition: all $transition-base;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   // 移动端使用更紧凑的样式
   @include mobile {
-    padding: $spacing-md $spacing-lg;
+    padding: $spacing-lg;
     font-size: $font-sm;
-    
-    // 超小屏幕进一步压缩
+
     @media (max-width: 360px) {
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-xs;
-      
+      padding: $spacing-md;
+      font-size: $font-sm;
+
       svg {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
       }
     }
   }
@@ -955,27 +1003,37 @@ function clearHistory() {
   &:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: $accent-primary;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   &.danger {
     &:hover {
       background: rgba(255, 51, 102, 0.1);
       border-color: $accent-error;
+      box-shadow: 0 6px 20px rgba(255, 51, 102, 0.2);
     }
   }
-  
+
   // 移动端禁用悬停效果，使用点击反馈
   @include mobile {
     &:hover {
       background: rgba(255, 255, 255, 0.05);
       border-color: rgba(255, 255, 255, 0.1);
+      transform: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
-    
+
     &:active {
       background: rgba(255, 255, 255, 0.1);
       transform: scale(0.98);
     }
-    
+
     &.danger:active {
       background: rgba(255, 51, 102, 0.1);
     }
@@ -1035,11 +1093,11 @@ function clearHistory() {
   background: $bg-secondary;
   border-top-left-radius: $radius-lg;
   border-top-right-radius: $radius-lg;
-  
+
   .van-popup__close-icon {
     color: $text-secondary;
     font-size: 18px;
-    
+
     &:hover {
       color: $text-primary;
     }
@@ -1127,7 +1185,7 @@ function clearHistory() {
 .popup-header {
   padding: 0 $spacing-lg $spacing-md;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  
+
   .popup-title {
     font-size: $font-lg;
     font-weight: $font-semibold;
