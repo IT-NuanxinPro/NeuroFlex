@@ -3,6 +3,6 @@
   "versionCode": 10002,
   "downloadUrl": "https://download-neuroflex.061129.xyz/android-v1.0.2/NeuroFlex-v1.0.2.apk",
   "githubUrl": "https://github.com/IT-NuanxinPro/NeuroFlex/releases/download/android-v1.0.2/NeuroFlex-v1.0.2.apk",
-  "changelog": "🔧 NeuroFlex 1.0.2 更新\n\n✨ 新功能：\n• 修复版本更新检查问题\n• 优化 App 下载横幅显示\n• 改进设置页面版本检查功能\n• 修复 Stroop 训练颜色按钮顺序问题\n\n🐛 修复：\n• 修复隐私协议弹窗背景样式\n• 优化游戏规则按钮显示\n• 改进版本检查逻辑",
-  "releaseDate": "2026-01-21T12:00:00Z"
+  "changelog": "版本 1.0.2 发布",
+  "releaseDate": "2026-01-21T14:39:43Z"
 }
