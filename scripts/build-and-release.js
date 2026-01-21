@@ -103,6 +103,10 @@ try {
   // 3. 构建流程
   console.log('\n📦 开始构建流程...');
   
+  // 清理构建缓存
+  console.log('🧹 清理构建缓存...');
+  runCommand('./gradlew clean', { cwd: 'android' });
+  
   // 构建 web 资源
   console.log('🌐 构建 web 资源...');
   runCommand('DISABLE_CDN=true npm run build');
@@ -155,11 +159,35 @@ try {
       console.log(`ℹ️ Tag ${tagName} 可能已存在，继续发布...`);
     }
 
-    // 创建 Release
-    runCommand(`gh release create ${tagName} --title "${releaseTitle}" --notes "${releaseNotes}"`);
-    
-    // 上传 APK
-    runCommand(`gh release upload ${tagName} "${apkPath}"`);
+    // 检查 Release 是否已存在
+    let releaseExists = false;
+    try {
+      execSync(`gh release view ${tagName}`, { stdio: 'pipe' });
+      releaseExists = true;
+      console.log(`ℹ️ Release ${tagName} 已存在，将覆盖 APK`);
+    } catch (error) {
+      console.log(`ℹ️ Release ${tagName} 不存在，将创建新的 Release`);
+    }
+
+    if (releaseExists) {
+      // 删除现有的 APK 文件（如果存在）
+      const apkName = `NeuroFlex-v${version}.apk`;
+      try {
+        runCommand(`gh release delete-asset ${tagName} ${apkName} --yes`);
+        console.log(`🗑️ 已删除现有的 ${apkName}`);
+      } catch (error) {
+        console.log(`ℹ️ 现有 APK 不存在，直接上传`);
+      }
+      
+      // 上传新的 APK
+      runCommand(`gh release upload ${tagName} "${apkPath}"`);
+    } else {
+      // 创建新的 Release
+      runCommand(`gh release create ${tagName} --title "${releaseTitle}" --notes "${releaseNotes}"`);
+      
+      // 上传 APK
+      runCommand(`gh release upload ${tagName} "${apkPath}"`);
+    }
     
     console.log(`\n🎉 发布成功!`);
     console.log(`   Release: https://github.com/$(gh repo view --json owner,name -q '.owner.login + "/" + .name')/releases/tag/${tagName}`);
