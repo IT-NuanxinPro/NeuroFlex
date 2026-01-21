@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { saveUserData, loadUserData } from '@/utils/storage'
+import storageManager from '@/utils/storage'
 
 export const useUserStore = defineStore('user', () => {
   // 状态
@@ -41,14 +41,29 @@ export const useUserStore = defineStore('user', () => {
     saveToStorage()
   }
 
-  function addTrainingRecord(record) {
+  async function addTrainingRecord(record) {
     const newRecord = {
       id: generateUUID(),
       ...record,
       completedAt: new Date()
     }
+    
+    // 添加到内存中的历史记录
     trainingHistory.value.unshift(newRecord)
-    saveToStorage()
+    
+    // 保存到新的存储系统
+    try {
+      await storageManager.saveTrainingRecord(newRecord)
+    } catch (error) {
+      console.error('❌ 保存训练记录失败:', error)
+    }
+    
+    // 保存用户数据
+    try {
+      await saveToStorage()
+    } catch (error) {
+      console.error('❌ 保存用户数据失败:', error)
+    }
   }
 
   function getTrainingHistory(filter = {}) {
@@ -80,29 +95,43 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 持久化
-  function saveToStorage() {
-    const data = {
-      profile: profile.value,
-      trainingHistory: trainingHistory.value,
-      preferences: preferences.value
+  async function saveToStorage() {
+    try {
+      const data = {
+        profile: profile.value,
+        trainingHistory: trainingHistory.value,
+        preferences: preferences.value
+      }
+      
+      await storageManager.setItem('user_data', data)
+      
+      // 同时保存训练记录到新的存储系统
+      for (const record of trainingHistory.value) {
+        if (!record.savedToNewStorage) {
+          await storageManager.saveTrainingRecord({
+            ...record,
+            savedToNewStorage: true
+          })
+        }
+      }
+      
+      return true
+    } catch (error) {
+      console.error('保存数据失败:', error)
+      return false
     }
-    const result = saveUserData(data)
-
-    if (!result.success) {
-      console.error('保存数据失败:', result.error)
-    } else if (result.warning) {
-      console.warn(result.warning)
-    }
-
-    return result.success
   }
 
-  function loadFromStorage() {
-    const data = loadUserData()
-    if (data) {
-      if (data.profile) profile.value = data.profile
-      if (data.trainingHistory) trainingHistory.value = data.trainingHistory
-      if (data.preferences) preferences.value = data.preferences
+  async function loadFromStorage() {
+    try {
+      const data = await storageManager.getItem('user_data', null)
+      if (data) {
+        if (data.profile) profile.value = data.profile
+        if (data.trainingHistory) trainingHistory.value = data.trainingHistory
+        if (data.preferences) preferences.value = data.preferences
+      }
+    } catch (error) {
+      console.error('加载数据失败:', error)
     }
   }
 
@@ -119,8 +148,8 @@ export const useUserStore = defineStore('user', () => {
         clearTimeout(saveTimer)
       }
       // 延迟500ms保存，避免频繁写入
-      saveTimer = setTimeout(() => {
-        saveToStorage()
+      saveTimer = setTimeout(async () => {
+        await saveToStorage()
         saveTimer = null
       }, 500)
     },

@@ -443,7 +443,7 @@ function endTraining(success) {
   userStore.addTrainingRecord({
     moduleName: 'schulte',
     difficulty: `${gridSize.value}x${gridSize.value}`,
-    score,
+    score: Math.round(score), // 四舍五入为整数
     duration: finalTime.value,
     accuracy: game.accuracy.value / 100, // 将百分比转换为小数格式以保持一致性
     details: {
@@ -457,8 +457,14 @@ function endTraining(success) {
 }
 
 function calculateSchulteScore() {
+  // 检查必要的数据是否存在
+  if (!game.accuracy || !game.timestamps) {
+    console.warn('游戏数据不完整，使用默认分数')
+    return 50 // 返回默认分数
+  }
+
   // 准确率分数 (70%)
-  const accuracyScore = game.accuracy.value
+  const accuracyScore = game.accuracy.value || 0
 
   // 速度分数 (20%) - 基于研究数据的标准时间
   const gridSizeNum = gridSize.value
@@ -475,22 +481,25 @@ function calculateSchulteScore() {
     standardTime = gridSizeNum * gridSizeNum * 800 // 其他尺寸的估算
   }
   
-  const speedRatio = standardTime / finalTime.value
+  const currentTime = finalTime.value || 0
+  const speedRatio = currentTime > 0 ? standardTime / currentTime : 0
   const speedScore = Math.min(100, speedRatio * 100)
 
   // 稳定性分数 (10%) - 基于反应时间的一致性
-  const reactionTimes = game.reactionTimes.value
+  const intervals = game.intervals?.value || []
   let stabilityScore = 100
   
-  if (reactionTimes.length > 1) {
-    const avgReactionTime = reactionTimes.reduce((sum, time) => sum + time, 0) / reactionTimes.length
-    const variance = reactionTimes.reduce((sum, time) => sum + Math.pow(time - avgReactionTime, 2), 0) / reactionTimes.length
+  if (intervals.length > 1) {
+    const avgInterval = intervals.reduce((sum, time) => sum + time, 0) / intervals.length
+    const variance = intervals.reduce((sum, time) => sum + Math.pow(time - avgInterval, 2), 0) / intervals.length
     stabilityScore = Math.max(0, 100 - (variance / 1000))
   }
 
   // 最终分数 (70% + 20% + 10%)
   const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + stabilityScore * 0.1
-  return Math.max(0, Math.min(100, finalScore))
+  
+  // 确保分数在合理范围内并四舍五入为整数
+  return Math.round(Math.max(0, Math.min(100, finalScore)))
 }
 
 function resetTraining() {

@@ -83,7 +83,7 @@
 
         <Transition name="word-fade" mode="out-in">
           <div
-            :key="currentTrialIndex"
+            :key="currentTrial"
             class="word-display"
             :style="{ color: currentColor }"
             :class="{ disabled: isGameDisabled }"
@@ -93,7 +93,7 @@
         </Transition>
 
         <Transition name="buttons-fade" mode="out-in">
-          <div :key="currentTrialIndex" class="color-buttons" :class="{ disabled: isGameDisabled }">
+          <div :key="currentTrial" class="color-buttons" :class="{ disabled: isGameDisabled }">
             <button
               v-for="color in colors"
               :key="color.name"

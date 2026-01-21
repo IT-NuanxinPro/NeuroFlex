@@ -439,10 +439,6 @@ async function exportData() {
   }
 }
 
-function goToDownload() {
-  router.push('/download')
-}
-
 async function clearHistory() {
   if (confirm('确定要清空所有训练记录吗？此操作不可恢复！')) {
     try {

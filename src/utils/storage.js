@@ -55,7 +55,7 @@ class LocalStorageManager {
       
       return record.id;
     } catch (error) {
-      console.error('Failed to save training record:', error);
+      console.error('保存训练记录失败:', error);
       throw new Error('保存训练记录失败');
     }
   }
@@ -387,6 +387,8 @@ class LocalStorageManager {
         localStorage.setItem(fullKey, serializedValue);
       }
     } catch (error) {
+      console.error('保存数据失败:', error)
+      
       if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
         // 存储空间不足，清理旧数据
         await this.cleanOldRecords(30); // 清理30天前的数据
@@ -400,6 +402,7 @@ class LocalStorageManager {
             localStorage.setItem(this.prefix + key, JSON.stringify(value));
           }
         } catch (retryError) {
+          console.error('清理后仍然保存失败:', retryError)
           throw new Error('存储空间不足，请清理数据后重试');
         }
       } else {
