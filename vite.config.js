@@ -17,43 +17,9 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
-      manifest: {
-        name: 'NeuroFlex - 认知训练中心',
-        short_name: 'NeuroFlex',
-        description: '专业的认知与康复训练系统',
-        theme_color: '#1a1a2e',
-        background_color: '#0f0f1e',
-        display: 'standalone',
-        orientation: 'portrait',
-        icons: [
-          {
-            src: '/favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png',
-            purpose: 'any'
-          }
-        ]
-      },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
@@ -91,6 +57,42 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
               }
             }
+          }
+        ]
+      },
+      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png', 'icon-192x192.png', 'icon-512x512.png'],
+      manifest: {
+        name: 'NeuroFlex - 认知训练中心',
+        short_name: 'NeuroFlex',
+        description: '专业的认知与康复训练系统',
+        theme_color: '#1a1a2e',
+        background_color: '#0f0f1e',
+        display: 'standalone',
+        orientation: 'portrait',
+        icons: [
+          {
+            src: '/favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/apple-touch-icon-180x180.png',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       }
