@@ -21,6 +21,21 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>NeuroFlex 科学认知训练系统</title>
     
+    <!-- GitHub Pages SPA 路由处理 -->
+    <script>
+      // 处理 GitHub Pages SPA 路由重定向
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location))
+    </script>
+    
     <script defer src="https://cloud.umami.is/script.js" data-website-id="0bca92aa-6051-451d-adc9-196bf1b191e9"></script>
     <style>
       /* 安全区域 CSS 变量 */
