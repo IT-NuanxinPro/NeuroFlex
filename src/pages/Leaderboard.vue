@@ -219,6 +219,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .leaderboard-page {
   min-height: 100vh;
   background: $bg-primary;
@@ -397,7 +399,7 @@ onMounted(() => {
       color: $text-primary;
 
       &:hover {
-        background: linear-gradient(135deg, darken($accent-primary, 5%), darken($accent-secondary, 5%));
+        background: linear-gradient(135deg, color.adjust($accent-primary, $lightness: -5%), color.adjust($accent-secondary, $lightness: -5%));
         transform: translateY(-1px);
       }
     }

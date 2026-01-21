@@ -1,0 +1,132 @@
+name: Android Release
+
+on:
+  # Tag 触发（推荐）
+  push:
+    tags:
+      - 'android-v*'
+
+  # 手动触发（可选指定版本）
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (如 1.0.0)，留空则从 package.json 读取'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许创建 Release 和推送代码
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build web assets (without CDN)
+        run: DISABLE_CDN=true pnpm build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/neuroflex.keystore
+
+      - name: Create keystore.properties
+        run: |
+          cat > android/keystore.properties << EOF
+          storeFile=neuroflex.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=neuroflex
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      - name: Build Release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            # 手动触发时使用输入的版本
+            VERSION="${{ inputs.version }}"
+          elif [[ "$GITHUB_REF" == refs/tags/android-v* ]]; then
+            # Tag 触发时从 tag 提取版本
+            VERSION="${GITHUB_REF#refs/tags/android-v}"
+          else
+            # 从 package.json 读取版本
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Build version: $VERSION"
+
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/release/*.apk NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: android-v${{ steps.get_version.outputs.VERSION }}
+          files: NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
+          name: Android v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## NeuroFlex Android v${{ steps.get_version.outputs.VERSION }}
+
+            ### 下载
+            点击下方 APK 文件下载安装
+
+            ### 更新内容
+            - 请查看 commit 记录
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update app-version.json
+        run: |
+          # 获取下载域名，优先使用环境变量，否则使用默认值
+          DOWNLOAD_BASE_URL="${{ vars.DOWNLOAD_BASE_URL || 'https://download-neuroflex.061129.xyz' }}"
+          
+          mkdir -p public
+          cat > public/app-version.json << EOF
+          {
+            "version": "${{ steps.get_version.outputs.VERSION }}",
+            "versionCode": $(node -p "const v='${{ steps.get_version.outputs.VERSION }}'.split('.'); v[0]*10000+v[1]*100+Number(v[2])"),
+            "downloadUrl": "${DOWNLOAD_BASE_URL}/android-v${{ steps.get_version.outputs.VERSION }}/NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk",
+            "githubUrl": "https://github.com/${{ github.repository }}/releases/download/android-v${{ steps.get_version.outputs.VERSION }}/NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk",
+            "changelog": "版本 ${{ steps.get_version.outputs.VERSION }} 发布",
+            "releaseDate": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Commit app-version.json
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add public/app-version.json
+          git diff --cached --quiet || git commit -m "chore: update app-version.json to v${{ steps.get_version.outputs.VERSION }}"
+          git push origin HEAD:main

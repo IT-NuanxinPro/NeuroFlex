@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400">
+  <defs>
+    <!-- 系统主题渐变 -->
+    <linearGradient id="logoVertGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7b2cbf;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 发光效果 -->
+    <filter id="logoVertGlow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="300" height="400" rx="30" fill="#0f0f1e"/>
+  
+  <!-- 顶部图标部分 -->
+  <g transform="translate(50, 30)">
+    <!-- 外框 -->
+    <rect x="0" y="0" width="200" height="200" rx="30" fill="none" stroke="url(#logoVertGrad)" stroke-width="3" opacity="0.5"/>
+    
+    <!-- NF字母 -->
+    <g filter="url(#logoVertGlow)">
+      <!-- 字母 N -->
+      <path d="M 50 70 L 50 140 M 50 70 L 90 140 M 90 70 L 90 140" 
+            stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M 50 70 L 50 140 M 50 70 L 90 140 M 90 70 L 90 140" 
+            stroke="url(#logoVertGrad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+      
+      <!-- 字母 F -->
+      <path d="M 110 70 L 110 140 M 110 70 L 150 70 M 110 105 L 140 105" 
+            stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M 110 70 L 110 140 M 110 70 L 150 70 M 110 105 L 140 105" 
+            stroke="url(#logoVertGrad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+    </g>
+    
+    <!-- 四角能力点 -->
+    <g>
+      <circle cx="30" cy="30" r="5" fill="url(#logoVertGrad)" opacity="0.9"/>
+      <text x="42" y="35" fill="#ffffff" font-family="Arial, sans-serif" font-size="9" font-weight="600">记忆</text>
+      
+      <circle cx="170" cy="30" r="5" fill="url(#logoVertGrad)" opacity="0.9"/>
+      <text x="135" y="35" fill="#ffffff" font-family="Arial, sans-serif" font-size="9" font-weight="600">注意</text>
+      
+      <circle cx="30" cy="170" r="5" fill="url(#logoVertGrad)" opacity="0.9"/>
+      <text x="42" y="175" fill="#ffffff" font-family="Arial, sans-serif" font-size="9" font-weight="600">逻辑</text>
+      
+      <circle cx="170" cy="170" r="5" fill="url(#logoVertGrad)" opacity="0.9"/>
+      <text x="135" y="175" fill="#ffffff" font-family="Arial, sans-serif" font-size="9" font-weight="600">创造</text>
+    </g>
+    
+    <!-- 神经网络连接线 -->
+    <g stroke="url(#logoVertGrad)" stroke-width="2" fill="none" opacity="0.6">
+      <!-- 连接到NF字母 -->
+      <path d="M 35 35 Q 45 55 50 70" stroke-linecap="round"/>
+      <path d="M 165 35 Q 155 55 150 70" stroke-linecap="round"/>
+      <path d="M 35 165 Q 45 145 50 140" stroke-linecap="round"/>
+      <path d="M 165 165 Q 155 145 150 140" stroke-linecap="round"/>
+      
+      <!-- 连接到无穷符号 -->
+      <path d="M 90 140 Q 95 148 100 155" stroke-linecap="round"/>
+      <path d="M 110 140 Q 105 148 100 155" stroke-linecap="round"/>
+      
+      <!-- 四角之间的连接 -->
+      <path d="M 35 35 Q 100 20 165 35" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+      <path d="M 35 165 Q 100 180 165 165" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+      <path d="M 35 35 Q 20 100 35 165" stroke-width="1.5" opacity="0.3" stroke-linecap="round"/>
+      <path d="M 165 35 Q 180 100 165 165" stroke-width="1.5" opacity="0.3" stroke-linecap="round"/>
+      
+      <!-- 交叉连接 -->
+      <path d="M 35 35 Q 100 100 165 165" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+      <path d="M 165 35 Q 100 100 35 165" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+    </g>
+    
+    <!-- 无穷符号 -->
+    <g filter="url(#logoVertGlow)">
+      <circle cx="100" cy="155" r="14" fill="url(#logoVertGrad)" opacity="0.3"/>
+      <circle cx="100" cy="155" r="10" fill="url(#logoVertGrad)"/>
+      <text x="100" y="160" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10" font-weight="bold">∞</text>
+    </g>
+  </g>
+  
+  <!-- 底部文字部分 -->
+  <g transform="translate(0, 260)">
+    <!-- 主标题 -->
+    <text x="150" y="40" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="bold">NEUROFLEX</text>
+    <text x="150" y="40" text-anchor="middle" fill="url(#logoVertGrad)" font-family="Arial, sans-serif" font-size="32" font-weight="bold">NEUROFLEX</text>
+    
+    <!-- 副标题 -->
+    <text x="150" y="70" text-anchor="middle" fill="#b8b8d1" font-family="Arial, sans-serif" font-size="14" font-weight="500">科学认知训练系统</text>
+    
+    <!-- 标语 -->
+    <text x="150" y="95" text-anchor="middle" fill="#8b8b9f" font-family="Arial, sans-serif" font-size="11">Scientific Cognitive Training System</text>
+  </g>
+</svg>

@@ -381,13 +381,50 @@ function endTraining() {
 
   trainingStore.endTraining()
 
-  // 保存训练记录
-  const score = Math.round(accuracy.value * 100)
+  // 计算新的评分系统分数
+  const score = calculateMemoryStoryScore()
+  
   userStore.addTrainingRecord({
     moduleName: 'memory-story',
     difficulty: `${itemCount.value}个物品`,
-    score,
+    score: Math.round(score),
     duration: itemCount.value * 10 * 1000,
+    accuracy: accuracy.value,
+    details: {
+      itemCount: itemCount.value,
+      correctItems: correctItems.value,
+      correctOrder: correctOrder.value,
+      userStory: userStory.value,
+      memoryTime: memoryTime.value
+    }
+  })
+}
+
+function calculateMemoryStoryScore() {
+  // 记忆准确率分数 (70%) - 结合物品准确率和位置准确率
+  const itemAccuracy = correctItems.value / itemCount.value
+  const locationAccuracy = correctOrder.value / itemCount.value
+  const accuracyScore = (itemAccuracy * 0.6 + locationAccuracy * 0.4) * 100
+
+  // 联想效率分数 (20%) - 基于记忆时间
+  const standardMemoryTime = itemCount.value * 5000 // 每个物品5秒
+  const actualMemoryTime = memoryTime.value || standardMemoryTime
+  const speedRatio = standardMemoryTime / actualMemoryTime
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 记忆保持分数 (10%) - 基于整体表现（简化版本）
+  const retentionScore = accuracyScore // 使用准确率作为记忆保持指标
+
+  // 最终分数
+  const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + retentionScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
+}
+
+function saveTrainingRecord() {
+  userStore.addTrainingRecord({
+    gameType: 'memory-story',
+    score: calculateMemoryStoryScore(),
+    duration: Date.now() - startTime.value,
     accuracy: accuracy.value,
     details: {
       itemCount: itemCount.value,

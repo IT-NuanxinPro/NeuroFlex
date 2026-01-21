@@ -43,6 +43,9 @@
         <div class="form-container">
           <!-- 移动端标题 -->
           <div v-if="!isPCDevice" class="mobile-title-section">
+            <div class="logo-container">
+              <NeuroFlexLogo variant="vertical" size="large" :animated="true" />
+            </div>
             <h2 class="form-title">欢迎回来</h2>
             <p class="form-subtitle">继续您的认知训练之旅</p>
           </div>
@@ -208,6 +211,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth.js'
+import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
 import { 
   Form as VanForm, 
   Field as VanField, 
@@ -358,6 +362,8 @@ const goToRegister = () => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .login-page {
   min-height: 100vh;
   background: linear-gradient(135deg, $bg-primary 0%, $bg-secondary 100%);
@@ -596,6 +602,14 @@ const goToRegister = () => {
   margin-bottom: $spacing-2xl;
   // 标题入场动画 - 加快速度
   animation: fadeInUp 0.4s ease-out 0.4s both;
+
+  .logo-container {
+    margin-bottom: $spacing-lg;
+    display: flex;
+    justify-content: center;
+    // logo入场动画
+    animation: scaleIn 0.5s ease-out 0.2s both;
+  }
 
   .form-title {
     font-size: $font-2xl;
@@ -845,7 +859,7 @@ const goToRegister = () => {
     transition: color $transition-base;
 
     &:hover {
-      color: lighten($accent-primary, 10%);
+      color: color.adjust($accent-primary, $lightness: 10%);
     }
   }
 }

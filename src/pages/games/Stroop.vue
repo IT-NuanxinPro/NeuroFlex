@@ -365,11 +365,14 @@ function endTraining() {
   const totalTime = reaction.timestamps.value.length > 0
     ? reaction.timestamps.value[reaction.timestamps.value.length - 1] - reaction.timestamps.value[0]
     : 0
+
+  // 计算新的评分系统分数
+  const score = calculateStroopScore()
     
   userStore.addTrainingRecord({
     moduleName: 'stroop',
     difficulty: difficulty.value,
-    score: Math.round(accuracy.value * 100),
+    score: Math.round(score),
     duration: totalTime,
     accuracy: accuracy.value,
     details: {
@@ -383,6 +386,29 @@ function endTraining() {
       slowestReaction: reaction.slowestReaction.value
     }
   })
+}
+
+function calculateStroopScore() {
+  // 准确率分数 (70%)
+  const accuracyScore = accuracy.value * 100
+
+  // 速度分数 (20%) - 基于研究数据的标准反应时间
+  const standardReactionTime = difficulty.value === 'basic' ? 800 : 1000 // ms (基于研究数据)
+  const avgReactionTime = reaction.averageReactionTime.value || standardReactionTime
+  const speedRatio = standardReactionTime / avgReactionTime
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 抗干扰分数 (10%) - 基于一致性表现
+  // 对于基础模式，抗干扰能力较高；进阶模式根据错误率计算
+  let interferenceScore = 100
+  if (difficulty.value === 'advanced') {
+    const errorRate = wrongCount.value / totalTrials.value
+    interferenceScore = Math.max(0, (1 - errorRate * 2) * 100) // 错误率影响抗干扰分数
+  }
+
+  // 最终分数
+  const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + interferenceScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function resetTraining() {

@@ -2,7 +2,7 @@
   <div class="home-page">
     <!-- 移动端顶部栏 -->
     <header v-if="!isPCDevice" class="top-bar">
-      <NeuroFlexLogo />
+      <NeuroFlexLogo variant="horizontal" size="medium" :animated="true" />
       <div class="user-actions">
         <button class="icon-button" aria-label="设置" @click="goToSettings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -142,6 +142,8 @@ function goToSettings() {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .home-page {
   height: 100%; // 填满父容器
   display: flex;
@@ -275,7 +277,7 @@ function goToSettings() {
       }
       
       .enter-button {
-        background: linear-gradient(135deg, $accent-primary, lighten($accent-primary, 10%));
+        background: linear-gradient(135deg, $accent-primary, color.adjust($accent-primary, $lightness: 10%));
         transform: translateX(4px);
       }
     }

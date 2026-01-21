@@ -511,6 +511,8 @@ const goToLogin = () => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .register-page {
   min-height: 100vh;
   background: linear-gradient(135deg, $bg-primary 0%, $bg-secondary 100%);
@@ -1032,7 +1034,7 @@ const goToLogin = () => {
     transition: color $transition-base;
 
     &:hover {
-      color: lighten($accent-primary, 10%);
+      color: color.adjust($accent-primary, $lightness: 10%);
     }
   }
 }

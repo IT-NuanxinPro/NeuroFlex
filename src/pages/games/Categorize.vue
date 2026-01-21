@@ -376,8 +376,8 @@ function endTraining() {
 
   trainingStore.endTraining()
 
-  // 保存训练记录
-  const score = Math.round(accuracy.value * 100)
+  // 计算新的评分系统分数
+  const score = calculateCategorizeScore()
   const totalTime = reaction.timestamps.value.length > 0
     ? reaction.timestamps.value[reaction.timestamps.value.length - 1] - reaction.timestamps.value[0]
     : 0
@@ -385,7 +385,7 @@ function endTraining() {
   userStore.addTrainingRecord({
     moduleName: 'categorize',
     difficulty: dimensions.value === 1 ? '单维度' : '双维度',
-    score,
+    score: Math.round(score),
     duration: totalTime,
     accuracy: accuracy.value,
     details: {
@@ -397,6 +397,25 @@ function endTraining() {
       results: results.value
     }
   })
+}
+
+function calculateCategorizeScore() {
+  // 分类准确率分数 (70%)
+  const accuracyScore = accuracy.value * 100
+
+  // 规则理解速度分数 (20%) - 基于学习试次
+  const standardLearningTrials = dimensions.value === 1 ? 8 : 15
+  const actualLearningTrials = items.value.length // 使用总试次数作为学习指标
+  const speedRatio = standardLearningTrials / actualLearningTrials
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 认知灵活性分数 (10%) - 基于错误率和反应时间一致性
+  const errorRate = (items.value.length - correctCount.value) / items.value.length
+  const flexibilityScore = Math.max(0, (1 - errorRate * 2) * 100)
+
+  // 最终分数
+  const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + flexibilityScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function resetTraining() {

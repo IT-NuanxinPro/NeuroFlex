@@ -1,61 +1,21 @@
 <template>
-  <div class="neuroflex-logo" :class="{ compact }">
-    <div class="logo-icon" :style="{ width: iconSize + 'px', height: iconSize + 'px' }">
-      <svg :width="iconSize - 8" :height="iconSize - 8" viewBox="0 0 512 512">
-        <defs>
-          <linearGradient :id="gradientId" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color: #00d4ff; stop-opacity: 1" />
-            <stop offset="100%" style="stop-color: #7b2cbf; stop-opacity: 1" />
-          </linearGradient>
-        </defs>
-        <!-- 神经网络节点 -->
-        <circle cx="140" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <circle cx="140" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <circle cx="140" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <circle cx="256" cy="120" r="24" :fill="`url(#${gradientId})`" />
-        <circle cx="256" cy="220" r="24" :fill="`url(#${gradientId})`" />
-        <circle cx="256" cy="292" r="24" :fill="`url(#${gradientId})`" />
-        <circle cx="256" cy="392" r="24" :fill="`url(#${gradientId})`" />
-        <circle cx="372" cy="160" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <circle cx="372" cy="256" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <circle cx="372" cy="352" r="20" :fill="`url(#${gradientId})`" opacity="0.8" />
-        <!-- 连接线 -->
-        <g :stroke="`url(#${gradientId})`" stroke-width="3" opacity="0.4" fill="none">
-          <line x1="160" y1="160" x2="232" y2="120" />
-          <line x1="160" y1="160" x2="232" y2="220" />
-          <line x1="160" y1="256" x2="232" y2="220" />
-          <line x1="160" y1="256" x2="232" y2="292" />
-          <line x1="160" y1="352" x2="232" y2="292" />
-          <line x1="160" y1="352" x2="232" y2="392" />
-          <line x1="280" y1="120" x2="352" y2="160" />
-          <line x1="280" y1="220" x2="352" y2="160" />
-          <line x1="280" y1="220" x2="352" y2="256" />
-          <line x1="280" y1="292" x2="352" y2="256" />
-          <line x1="280" y1="292" x2="352" y2="352" />
-          <line x1="280" y1="392" x2="352" y2="352" />
-        </g>
-        <!-- 中心脉冲 -->
-        <circle
-          cx="256"
-          cy="256"
-          r="40"
-          fill="none"
-          stroke="#00d4ff"
-          stroke-width="2"
-          opacity="0.6"
-        />
-        <circle
-          cx="256"
-          cy="256"
-          r="60"
-          fill="none"
-          stroke="#00d4ff"
-          stroke-width="1"
-          opacity="0.3"
-        />
-      </svg>
+  <div class="neuroflex-logo" :class="{ compact, animated, [variant]: true }">
+    <!-- 图标+文字组合 -->
+    <div v-if="variant === 'horizontal' || variant === 'vertical'" class="logo-with-text">
+      <div class="logo-icon" :style="{ width: iconSize + 'px', height: iconSize + 'px' }">
+        <img :src="'/favicon.svg'" :width="iconSize - 8" :height="iconSize - 8" alt="NeuroFlex Logo" />
+      </div>
+      
+      <h1 class="logo-title" :class="titleClass">{{ title }}</h1>
     </div>
-    <h1 v-if="showTitle" class="logo-title" :class="titleClass">{{ title }}</h1>
+
+    <!-- 纯图标版本 -->
+    <div v-else-if="variant === 'icon'" class="logo-icon" :style="{ width: iconSize + 'px', height: iconSize + 'px' }">
+      <img :src="'/favicon.svg'" :width="iconSize - 8" :height="iconSize - 8" alt="NeuroFlex Logo" />
+    </div>
+
+    <!-- 纯文字版本 -->
+    <h1 v-else-if="variant === 'text'" class="logo-title" :class="titleClass">{{ title }}</h1>
   </div>
 </template>
 
@@ -63,14 +23,15 @@
 import { computed } from 'vue'
 
 const props = defineProps({
+  variant: {
+    type: String,
+    default: 'icon', // icon, horizontal, vertical, text
+    validator: value => ['icon', 'horizontal', 'vertical', 'text'].includes(value)
+  },
   size: {
     type: String,
     default: 'medium', // small, medium, large
     validator: value => ['small', 'medium', 'large'].includes(value)
-  },
-  showTitle: {
-    type: Boolean,
-    default: true
   },
   title: {
     type: String,
@@ -83,19 +44,32 @@ const props = defineProps({
   titleClass: {
     type: String,
     default: ''
+  },
+  animated: {
+    type: Boolean,
+    default: true
   }
 })
 
 const iconSize = computed(() => {
   const sizes = {
     small: 32,
-    medium: 40,
-    large: 56
+    medium: 48,
+    large: 64
   }
   return sizes[props.size]
 })
 
-const gradientId = computed(() => `logoGrad-${Math.random().toString(36).substring(2, 11)}`)
+const logoHeight = computed(() => {
+  const heights = {
+    small: 32,
+    medium: 48,
+    large: 64
+  }
+  return heights[props.size]
+})
+
+const gradientId = computed(() => Math.random().toString(36).substring(2, 11))
 </script>
 
 <style lang="scss" scoped>
@@ -107,42 +81,162 @@ const gradientId = computed(() => `logoGrad-${Math.random().toString(36).substri
   &.compact {
     gap: $spacing-sm;
   }
+
+  // 不同变体的布局
+  &.horizontal {
+    .logo-with-text {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+    }
+  }
+
+  &.vertical {
+    .logo-with-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: $spacing-sm;
+    }
+  }
+
+  &.text {
+    justify-content: center;
+  }
+}
+
+.logo-with-text {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+
+  .neuroflex-logo.compact & {
+    gap: $spacing-sm;
+  }
 }
 
 .logo-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all $transition-base;
+  flex-shrink: 0;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(0, 212, 255, 0.3);
-    transform: scale(1.05);
+  img {
+    display: block;
   }
 }
 
 .logo-title {
   font-weight: $font-bold;
-  background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.9), rgba(123, 44, 191, 0.9));
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin: 0;
   letter-spacing: 0.05em;
   font-size: $font-xl;
+  position: relative;
+  white-space: nowrap;
 
   .neuroflex-logo.compact & {
     font-size: $font-lg;
   }
 
+  .neuroflex-logo.animated & {
+    animation: gradientShift 6s ease-in-out infinite;
+  }
+
   @media (max-width: $breakpoint-sm) {
     font-size: $font-lg;
     letter-spacing: 0.02em;
+  }
+}
+
+// 响应式尺寸调整
+.neuroflex-logo {
+  // PC端侧边栏
+  .side-nav & {
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+    }
+    
+    .logo-title {
+      font-size: $font-lg;
+    }
+  }
+
+  // 移动端顶部导航
+  .top-bar & {
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+    }
+    
+    .logo-title {
+      font-size: $font-base;
+    }
+  }
+
+  // 页面头部
+  .page-header & {
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+    }
+    
+    .logo-title {
+      font-size: $font-xl;
+    }
+  }
+
+  // 登录页面
+  .mobile-title-section &,
+  .pc-title-section & {
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+    }
+    
+    .logo-title {
+      font-size: $font-2xl;
+    }
+  }
+}
+
+// 动画效果
+.neuroflex-logo.animated {
+  .logo-icon svg {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2px);
   }
 }
 </style>

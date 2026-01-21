@@ -440,16 +440,44 @@ function finishDrawing() {
 }
 
 function saveRecord() {
+  // 计算新的评分系统分数
+  const score = calculateMirrorScore()
+  
   userStore.addTrainingRecord({
     moduleName: 'mirror',
     difficulty: trainingModes.find(m => m.value === selectedMode.value)?.name,
-    score: syncScore.value,
+    score: Math.round(score),
     duration: drawingDuration.value,
     details: {
       mode: selectedMode.value,
-      syncRate: syncScore.value
+      syncRate: syncScore.value,
+      strokeCountLeft: strokeCountLeft.value,
+      strokeCountRight: strokeCountRight.value
     }
   })
+}
+
+function calculateMirrorScore() {
+  // 协调准确率分数 (70%) - 基于同步率
+  const coordinationScore = syncScore.value
+
+  // 反应速度分数 (20%) - 基于训练模式的标准反应时间
+  const standardReactionTime = selectedMode.value === 'sync' ? 600 : 
+                              selectedMode.value === 'mirror' ? 800 : 1000 // ms
+  // 估算平均反应时间（基于笔画数和训练时长）
+  const totalStrokes = strokeCountLeft.value + strokeCountRight.value
+  const avgReactionTime = totalStrokes > 0 ? drawingDuration.value / totalStrokes : standardReactionTime
+  const speedRatio = standardReactionTime / avgReactionTime
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 协调稳定性分数 (10%) - 基于左右手笔画数量的一致性
+  const total = strokeCountLeft.value + strokeCountRight.value
+  const diff = Math.abs(strokeCountLeft.value - strokeCountRight.value)
+  const stabilityScore = total > 0 ? Math.max(0, 100 - (diff / total) * 200) : 0
+
+  // 最终分数
+  const finalScore = coordinationScore * 0.7 + speedScore * 0.2 + stabilityScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function handleRetry() {

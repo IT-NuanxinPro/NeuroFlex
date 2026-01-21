@@ -347,11 +347,14 @@ function endTraining() {
   showResult.value = true
   gameState.value = 'completed'
   trainingStore.endTraining()
-  const score = Math.round(accuracy.value * 100)
+  
+  // 计算新的评分系统分数
+  const score = calculateSequenceScore()
+  
   userStore.addTrainingRecord({
     moduleName: 'sequence',
     difficulty: `${itemCount.value}个物品`,
-    score,
+    score: Math.round(score),
     duration: itemCount.value * speedMap[displaySpeed.value],
     accuracy: accuracy.value,
     details: {
@@ -361,6 +364,26 @@ function endTraining() {
       correctOrder: correctOrder.value
     }
   })
+}
+
+function calculateSequenceScore() {
+  // 准确率分数 (70%) - 结合物品准确率和顺序准确率
+  const itemAccuracy = correctItems.value / itemCount.value
+  const orderAccuracy = correctOrder.value / itemCount.value
+  const accuracyScore = (itemAccuracy * 0.6 + orderAccuracy * 0.4) * 100
+
+  // 速度分数 (20%) - 基于记忆时间
+  const standardMemoryTime = itemCount.value * 1000 // 每项1秒
+  const actualMemoryTime = itemCount.value * speedMap[displaySpeed.value]
+  const speedRatio = standardMemoryTime / actualMemoryTime
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 记忆广度分数 (10%) - 基于处理的序列长度
+  const spanScore = Math.min(100, (itemCount.value / 8) * 100)
+
+  // 最终分数
+  const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + spanScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function resetTraining() {

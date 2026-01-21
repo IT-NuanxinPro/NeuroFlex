@@ -10,7 +10,7 @@
       <div v-if="!isLoggedIn" class="guest-mode">
         <div class="guest-card">
           <div class="avatar-section">
-            <UserAvatar :src="null" :size="100" :clickable="true" @click="goToLogin" />
+            <UserAvatar :src="null" :size="100" :clickable="true" :showOverlay="false" @click="goToLogin" />
             <div class="login-hint">点击头像登录</div>
           </div>
 
@@ -390,6 +390,8 @@ function clearHistory() {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .profile-page {
   height: 100%; // 填满父容器
   background: $bg-primary;
@@ -552,7 +554,7 @@ function clearHistory() {
 
       .login-hint {
         font-size: $font-xs;
-        color: $accent-primary;
+        color: rgba(0, 212, 255, 0.7);
         font-weight: $font-medium;
       }
     }
@@ -677,7 +679,7 @@ function clearHistory() {
   display: inline-flex;
   align-items: center;
   gap: $spacing-xs;
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-sm $spacing-lg;
   border-radius: $radius-md;
   font-weight: $font-medium;
   font-size: $font-sm;
@@ -701,8 +703,8 @@ function clearHistory() {
     &:hover {
       background: linear-gradient(
         135deg,
-        darken($accent-primary, 5%),
-        darken($accent-secondary, 5%)
+        color.adjust($accent-primary, $lightness: -5%),
+        color.adjust($accent-secondary, $lightness: -5%)
       );
       transform: translateY(-1px);
     }
@@ -1167,7 +1169,7 @@ function clearHistory() {
 }
 
 :deep(.van-button--primary:active) {
-  background: linear-gradient(135deg, darken($accent-primary, 5%), darken($accent-secondary, 5%));
+  background: linear-gradient(135deg, color.adjust($accent-primary, $lightness: -5%), color.adjust($accent-secondary, $lightness: -5%));
 }
 
 :deep(.van-button--primary.van-button--loading) {

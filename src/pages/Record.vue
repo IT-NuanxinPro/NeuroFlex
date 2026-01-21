@@ -119,7 +119,7 @@
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">完成度</span>
-                  <span class="detail-value">{{ record.details?.clickCount || 0 }}/{{ record.details?.totalNumbers || 0 }}</span>
+                  <span class="detail-value">{{ record.details?.correctCount || 0 }}/{{ record.details?.totalNumbers || 0 }}</span>
                 </div>
               </div>
 

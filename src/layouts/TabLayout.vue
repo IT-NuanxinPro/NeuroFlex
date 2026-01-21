@@ -3,7 +3,7 @@
     <!-- PC端侧边导航栏 -->
     <nav v-if="isPCDevice" class="side-nav">
       <div class="nav-header">
-        <NeuroFlexLogo />
+        <NeuroFlexLogo variant="horizontal" size="medium" :animated="true" />
       </div>
       
       <div class="nav-links">
@@ -114,11 +114,12 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-// Tab页面之间切换使用淡入淡出
+// Tab页面之间切换动画控制
 watch(
   () => route.path,
   () => {
-    transitionName.value = 'fade'
+    // PC端不使用动画，移动端使用淡入淡出
+    transitionName.value = isPCDevice.value ? 'none' : 'fade'
   }
 )
 </script>

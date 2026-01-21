@@ -112,6 +112,12 @@ const routes = [
     name: 'Settings',
     component: () => import('@/pages/Settings.vue'),
     meta: { title: '设置', depth: 2 }
+  },
+  {
+    path: '/download',
+    name: 'Download',
+    component: () => import('@/pages/Download.vue'),
+    meta: { title: 'NeuroFlex 下载', depth: 1 }
   }
 ]
 

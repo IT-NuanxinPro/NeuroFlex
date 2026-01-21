@@ -583,12 +583,13 @@ function endTraining() {
 
   trainingStore.endTraining()
 
-  // 保存训练记录
-  const score = Math.round(accuracy.value * 100)
+  // 计算新的评分系统分数
+  const score = calculateAudioScore()
+
   userStore.addTrainingRecord({
     moduleName: 'audio',
     difficulty: `SNR ${signalNoiseRatio.value}%`,
-    score,
+    score: Math.round(score),
     duration: digitSequence.value.length * 1500,
     accuracy: accuracy.value,
     details: {
@@ -599,6 +600,26 @@ function endTraining() {
       correctOrder: correctOrder.value
     }
   })
+}
+
+function calculateAudioScore() {
+  // 准确率分数 (70%) - 结合数字准确率和顺序准确率
+  const digitAccuracy = correctDigits.value / digitSequence.value.length
+  const orderAccuracy = correctOrder.value / digitSequence.value.length
+  const accuracyScore = (digitAccuracy * 0.7 + orderAccuracy * 0.3) * 100
+
+  // 抗噪能力分数 (20%) - 基于信噪比
+  const noiseResistance = Math.min(100, (signalNoiseRatio.value / 40) * 100)
+
+  // 反应速度分数 (10%) - 基于输入完成时间
+  const standardInputTime = digitSequence.value.length * 2000 // 每个数字2秒
+  const actualInputTime = digitSequence.value.length * 1500 // 实际播放间隔
+  const speedRatio = standardInputTime / actualInputTime
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 最终分数
+  const finalScore = accuracyScore * 0.7 + noiseResistance * 0.2 + speedScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function resetTraining() {

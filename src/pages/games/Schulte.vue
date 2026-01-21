@@ -436,20 +436,61 @@ function endTraining(success) {
 
   trainingStore.endTraining()
 
-  // 保存训练记录（使用 Hook 的统计数据）
-  const score = success ? Math.max(0, 100 - Math.floor(finalTime.value / 1000)) : 0
+  // 计算分数 - 主要基于准确率，速度作为加分项
+  // 计算新的评分系统分数
+  const score = calculateSchulteScore()
+  
   userStore.addTrainingRecord({
     moduleName: 'schulte',
     difficulty: `${gridSize.value}x${gridSize.value}`,
     score,
     duration: finalTime.value,
-    accuracy: game.accuracy.value / 100,
+    accuracy: game.accuracy.value / 100, // 将百分比转换为小数格式以保持一致性
     details: {
       gridSize: gridSize.value,
       mode: mode.value,
+      correctCount: game.correctCount.value,
+      totalNumbers: game.totalNumbers.value,
       ...game.gameStats.value // 使用完整的统计数据
     }
   })
+}
+
+function calculateSchulteScore() {
+  // 准确率分数 (70%)
+  const accuracyScore = game.accuracy.value
+
+  // 速度分数 (20%) - 基于研究数据的标准时间
+  const gridSizeNum = gridSize.value
+  let standardTime
+  
+  // 根据心理学研究数据设定标准时间
+  if (gridSizeNum === 3) {
+    standardTime = 5400 // 5.4秒
+  } else if (gridSizeNum === 4) {
+    standardTime = 9600 // 9.6秒
+  } else if (gridSizeNum === 5) {
+    standardTime = 20000 // 20秒 (基于研究数据)
+  } else {
+    standardTime = gridSizeNum * gridSizeNum * 800 // 其他尺寸的估算
+  }
+  
+  const speedRatio = standardTime / finalTime.value
+  const speedScore = Math.min(100, speedRatio * 100)
+
+  // 稳定性分数 (10%) - 基于反应时间的一致性
+  const reactionTimes = game.reactionTimes.value
+  let stabilityScore = 100
+  
+  if (reactionTimes.length > 1) {
+    const avgReactionTime = reactionTimes.reduce((sum, time) => sum + time, 0) / reactionTimes.length
+    const variance = reactionTimes.reduce((sum, time) => sum + Math.pow(time - avgReactionTime, 2), 0) / reactionTimes.length
+    stabilityScore = Math.max(0, 100 - (variance / 1000))
+  }
+
+  // 最终分数 (70% + 20% + 10%)
+  const finalScore = accuracyScore * 0.7 + speedScore * 0.2 + stabilityScore * 0.1
+  return Math.max(0, Math.min(100, finalScore))
 }
 
 function resetTraining() {
