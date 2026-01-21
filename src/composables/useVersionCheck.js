@@ -1,5 +1,6 @@
 import { ref, onMounted } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 
 const currentVersion = ref('')
 const latestVersion = ref('')
@@ -9,10 +10,16 @@ const checking = ref(false)
 
 export function useVersionCheck() {
   // 获取当前版本（从package.json或构建时注入）
-  function getCurrentVersion() {
-    // 在 APP 环境下，应该获取 APP 版本而不是 package.json 版本
+  async function getCurrentVersion() {
+    // 在 APP 环境下，从 APP 信息中获取真实版本
     if (Capacitor.isNativePlatform()) {
-      return '1.0.1' // 当前 APP 版本
+      try {
+        const appInfo = await App.getInfo()
+        return appInfo.version
+      } catch (error) {
+        console.error('获取 APP 版本失败:', error)
+        return '1.0.1' // fallback
+      }
     }
     return import.meta.env.VITE_APP_VERSION || '1.1.0'
   }
@@ -81,8 +88,8 @@ export function useVersionCheck() {
   }
 
   // 初始化
-  onMounted(() => {
-    currentVersion.value = getCurrentVersion()
+  onMounted(async () => {
+    currentVersion.value = await getCurrentVersion()
     // 只在 APP 环境下自动检查更新
     if (Capacitor.isNativePlatform()) {
       checkForUpdates()

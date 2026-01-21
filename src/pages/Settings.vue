@@ -192,7 +192,7 @@ import permissionManager from '@/utils/permissions'
 const router = useRouter()
 const configStore = useConfigStore()
 const userStore = useUserStore()
-const { hasUpdate, updateInfo, checkForUpdates: checkVersionUpdates, goToDownload } = useVersionCheck()
+const { currentVersion, hasUpdate, updateInfo, checkForUpdates: checkVersionUpdates, goToDownload } = useVersionCheck()
 
 const privacyDialog = ref(null)
 const showPermissionDialog = ref(false)
@@ -255,7 +255,7 @@ async function checkForUpdates() {
     if (hasUpdate.value) {
       const confirmUpdate = confirm(
         `发现新版本 v${updateInfo.value?.version || '未知'}！\n\n` +
-        `当前版本：v${configStore.appConfig.version}\n` +
+        `当前版本：v${currentVersion.value}\n` +
         `最新版本：v${updateInfo.value?.version || '未知'}\n\n` +
         `是否立即下载更新？`
       )
