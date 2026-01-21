@@ -49,6 +49,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Clean Gradle cache
+        run: |
+          rm -rf ~/.gradle/caches/
+          rm -rf android/.gradle/
+          rm -rf android/build/
+          rm -rf android/app/build/
+
       - name: Sync Capacitor
         run: npx cap sync android
 
@@ -59,10 +66,16 @@ jobs:
           echo "MYAPP_RELEASE_STORE_PASSWORD=android" >> android/gradle.properties
           echo "MYAPP_RELEASE_KEY_ALIAS=androiddebugkey" >> android/gradle.properties
           echo "MYAPP_RELEASE_KEY_PASSWORD=android" >> android/gradle.properties
+          # 添加 Gradle 优化配置
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
+          echo "org.gradle.parallel=true" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
 
       - name: Build Release APK
         working-directory: android
-        run: ./gradlew assembleRelease
+        run: |
+          ./gradlew clean
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Get version
         id: get_version
