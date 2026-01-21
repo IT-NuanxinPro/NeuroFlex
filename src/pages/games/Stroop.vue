@@ -457,7 +457,6 @@ onUnmounted(() => {
 }
 
 .page-header {
-  @include safe-area-padding(top);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,7 +465,7 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: 0;
   z-index: 100;

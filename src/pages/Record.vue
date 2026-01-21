@@ -426,7 +426,6 @@ onUnmounted(() => {
 }
 
 .page-header {
-  @include safe-area-padding(top);
   flex-shrink: 0;
   display: flex;
   align-items: center;

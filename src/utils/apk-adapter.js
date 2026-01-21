@@ -288,10 +288,11 @@ export function initAPKAdapter() {
   root.style.setProperty('--safe-area-bottom', `${safeAreaInsets.bottom}px`)
   root.style.setProperty('--safe-area-left', `${safeAreaInsets.left}px`)
   
-  // 如果是APK环境，设置状态栏样式
+  // 如果是APK环境，使用系统默认状态栏样式
+  // 让capacitor.config.json中的配置和CSS的env(safe-area-inset-*)函数处理状态栏和安全区域
   if (isAPKEnvironment()) {
-    setStatusBarStyle('dark')
-    setNavigationBarColor('#0f0f1e')
+    // 设置为默认样式，让系统自动处理
+    setStatusBarStyle('default')
   }
   
   isAPKInitialized = true

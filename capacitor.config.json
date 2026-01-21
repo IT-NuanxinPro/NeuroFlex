@@ -7,9 +7,8 @@
   },
   "plugins": {
     "StatusBar": {
-      "style": "DARK",
-      "backgroundColor": "#0f0f1e",
-      "overlaysWebView": false
+      "style": "DEFAULT",
+      "backgroundColor": "#FFFFFF"
     },
     "SplashScreen": {
       "launchShowDuration": 0,

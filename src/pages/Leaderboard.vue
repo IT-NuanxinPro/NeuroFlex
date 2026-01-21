@@ -222,14 +222,14 @@ onMounted(() => {
 @use "sass:color";
 
 .leaderboard-page {
-  min-height: 100vh;
+  height: 100%;
   background: $bg-primary;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
-  @include safe-area-padding(top);
   display: flex;
   align-items: center;
   justify-content: center;

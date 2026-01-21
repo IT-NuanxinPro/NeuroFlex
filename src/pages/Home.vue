@@ -188,11 +188,10 @@ function goToDownload() {
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, $bg-primary 0%, $bg-secondary 100%);
-  overflow: hidden; // 防止滚动条
+  overflow: hidden; // 防止页面级别的滚动
 }
 
 .top-bar {
-  @include safe-area-padding(top);
   flex-shrink: 0;
   display: flex;
   align-items: center;

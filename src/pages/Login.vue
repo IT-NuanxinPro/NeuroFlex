@@ -372,9 +372,8 @@ const goToRegister = () => {
 }
 
 .mobile-header {
-  @include safe-area-padding(top);
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: 0;
   z-index: 100;
@@ -1094,7 +1093,6 @@ const goToRegister = () => {
 }
 
 .page-header {
-  @include safe-area-padding(top);
   flex-shrink: 0;
   display: flex;
   align-items: center;

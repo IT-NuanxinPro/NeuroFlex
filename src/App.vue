@@ -214,35 +214,6 @@ onMounted(async () => {
     }, 500)
   }
   
-  // 检测覆盖安装并修复状态
-  if (Capacitor.isNativePlatform()) {
-    const lastVersion = localStorage.getItem('app_last_version')
-    const currentAppVersion = await getCurrentAppVersion()
-    
-    console.log('🔍 版本检测:', { lastVersion, currentAppVersion })
-    
-    if (lastVersion && lastVersion !== currentAppVersion) {
-      console.log('🔄 检测到覆盖安装，执行修复流程')
-      
-      // 清理可能导致问题的状态
-      try {
-        // 清理 Vue Router 相关缓存
-        sessionStorage.clear()
-        
-        // 强制刷新页面状态（延迟执行避免与初始化冲突）
-        reloadTimer.value = setTimeout(() => {
-          console.log('🔄 强制刷新页面状态')
-          window.location.reload()
-        }, 2000)
-        
-      } catch (error) {
-        console.error('修复流程失败:', error)
-      }
-    }
-    
-    // 保存当前版本
-    localStorage.setItem('app_last_version', currentAppVersion)
-  }
 })
 
 onUnmounted(() => {
@@ -277,7 +248,7 @@ async function getCurrentAppVersion() {
   background-color: var(--bg-primary);
   position: relative;
   overflow-x: hidden;
-  
+
   // 移动端优化
   @include mobile {
     // 确保在移动端使用动态视口高度

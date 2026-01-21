@@ -293,17 +293,19 @@ function getPermissionName(key) {
 
 <style lang="scss" scoped>
 .settings-page {
-  min-height: 100vh;
+  height: 100%;
   background: $bg-primary;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
-  @include safe-area-padding(top);
-  position: sticky;
-  top: 0;
-  z-index: $z-header;
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  z-index: $z-fixed;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -340,9 +342,17 @@ function getPermissionName(key) {
 
 .page-content {
   flex: 1;
-  padding: $spacing-lg;
   overflow-y: auto;
+  padding: calc($spacing-md + 60px) $spacing-lg $spacing-lg;
+  padding-bottom: calc($spacing-lg + 70px + env(safe-area-inset-bottom));
   @include custom-scrollbar;
+  min-height: 0; // 重要：让flex子元素可以收缩
+
+  // PC端布局调整
+  &.pc-layout {
+    padding: $spacing-lg;
+    padding-bottom: $spacing-lg;
+  }
 }
 
 .settings-section {
