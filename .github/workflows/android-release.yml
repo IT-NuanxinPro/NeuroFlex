@@ -82,7 +82,7 @@ jobs:
           org.gradle.daemon=false
           org.gradle.parallel=true
           android.useAndroidX=true
-          android.enableJetifier=true
+          android.enableJetifier=false
           # ✅ 抑制 AGP 8.2.1 对 compileSdk=35 的警告
           android.suppressUnsupportedCompileSdk=35
           EOF
