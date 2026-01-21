@@ -892,7 +892,7 @@ function clearHistory() {
 
     // PC端调整
     @media (min-width: $breakpoint-lg) {
-      font-size: $font-4xl;
+      font-size: $font-3xl;
       margin-bottom: $spacing-sm;
     }
   }
