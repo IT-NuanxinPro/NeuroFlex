@@ -1,19 +1,23 @@
 /**
  * 本地存储管理器
- * 使用 localStorage 进行数据持久化，支持移动端
+ * 在 Web 环境使用 localStorage，在 APP 环境使用 Capacitor Preferences
  */
+
+import { Capacitor } from '@capacitor/core'
+import { Preferences } from '@capacitor/preferences'
 
 class LocalStorageManager {
   constructor() {
     this.prefix = 'neuroflex_';
     this.version = '1.0';
     this.maxRecords = 1000; // 本地最多存储1000条记录
+    this.isNativeApp = Capacitor.isNativePlatform();
   }
 
   /**
    * 保存训练记录到本地
    */
-  saveTrainingRecord(record) {
+  async saveTrainingRecord(record) {
     try {
       // 生成记录ID（如果没有）
       if (!record.id) {
@@ -26,7 +30,7 @@ class LocalStorageManager {
       record.savedAt = new Date().toISOString();
 
       // 获取现有记录
-      const records = this.getTrainingRecords();
+      const records = await this.getTrainingRecords();
       
       // 检查是否已存在
       const existingIndex = records.findIndex(r => r.id === record.id);
@@ -46,8 +50,8 @@ class LocalStorageManager {
         records.splice(this.maxRecords);
       }
 
-      // 保存到 localStorage
-      this.setItem('training_records', records);
+      // 保存到存储
+      await this.setItem('training_records', records);
       
       return record.id;
     } catch (error) {
@@ -59,9 +63,9 @@ class LocalStorageManager {
   /**
    * 获取所有训练记录
    */
-  getTrainingRecords(filter = {}) {
+  async getTrainingRecords(filter = {}) {
     try {
-      const records = this.getItem('training_records', []);
+      const records = await this.getItem('training_records', []);
       
       // 应用过滤器
       let filteredRecords = records;
@@ -95,16 +99,16 @@ class LocalStorageManager {
   /**
    * 获取未同步的记录
    */
-  getUnsyncedRecords() {
-    return this.getTrainingRecords({ synced: false });
+  async getUnsyncedRecords() {
+    return await this.getTrainingRecords({ synced: false });
   }
 
   /**
    * 标记记录为已同步
    */
-  markRecordSynced(recordId, cloudId = null) {
+  async markRecordSynced(recordId, cloudId = null) {
     try {
-      const records = this.getTrainingRecords();
+      const records = await this.getTrainingRecords();
       const recordIndex = records.findIndex(r => r.id === recordId);
       
       if (recordIndex >= 0) {
@@ -115,7 +119,7 @@ class LocalStorageManager {
           records[recordIndex].cloudId = cloudId;
         }
         
-        this.setItem('training_records', records);
+        await this.setItem('training_records', records);
         return true;
       }
       
@@ -129,9 +133,9 @@ class LocalStorageManager {
   /**
    * 批量标记记录为已同步
    */
-  markRecordsSynced(recordIds) {
+  async markRecordsSynced(recordIds) {
     try {
-      const records = this.getTrainingRecords();
+      const records = await this.getTrainingRecords();
       let updated = 0;
       
       recordIds.forEach(recordId => {
@@ -144,7 +148,7 @@ class LocalStorageManager {
       });
       
       if (updated > 0) {
-        this.setItem('training_records', records);
+        await this.setItem('training_records', records);
       }
       
       return updated;
@@ -157,12 +161,12 @@ class LocalStorageManager {
   /**
    * 删除本地记录
    */
-  deleteRecord(recordId) {
+  async deleteRecord(recordId) {
     try {
-      const records = this.getTrainingRecords();
+      const records = await this.getTrainingRecords();
       const filteredRecords = records.filter(r => r.id !== recordId);
       
-      this.setItem('training_records', filteredRecords);
+      await this.setItem('training_records', filteredRecords);
       return true;
     } catch (error) {
       console.error('Failed to delete record:', error);
@@ -173,12 +177,12 @@ class LocalStorageManager {
   /**
    * 清理旧记录
    */
-  cleanOldRecords(daysOld = 90) {
+  async cleanOldRecords(daysOld = 90) {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
       
-      const records = this.getTrainingRecords();
+      const records = await this.getTrainingRecords();
       const filteredRecords = records.filter(r => {
         const recordDate = new Date(r.completedAt);
         return recordDate >= cutoffDate;
@@ -187,7 +191,7 @@ class LocalStorageManager {
       const deletedCount = records.length - filteredRecords.length;
       
       if (deletedCount > 0) {
-        this.setItem('training_records', filteredRecords);
+        await this.setItem('training_records', filteredRecords);
       }
       
       return deletedCount;
@@ -200,10 +204,10 @@ class LocalStorageManager {
   /**
    * 获取存储统计信息
    */
-  getStorageStats() {
+  async getStorageStats() {
     try {
-      const records = this.getTrainingRecords();
-      const unsyncedRecords = this.getUnsyncedRecords();
+      const records = await this.getTrainingRecords();
+      const unsyncedRecords = await this.getUnsyncedRecords();
       
       // 计算存储大小（估算）
       const dataSize = JSON.stringify(records).length;
@@ -251,14 +255,14 @@ class LocalStorageManager {
   /**
    * 导出所有数据
    */
-  exportData() {
+  async exportData() {
     try {
       const data = {
         version: this.version,
         exportedAt: new Date().toISOString(),
-        trainingRecords: this.getTrainingRecords(),
-        userSettings: this.getUserSettings(),
-        stats: this.getStorageStats()
+        trainingRecords: await this.getTrainingRecords(),
+        userSettings: await this.getUserSettings(),
+        stats: await this.getStorageStats()
       };
       
       return JSON.stringify(data, null, 2);
@@ -271,13 +275,13 @@ class LocalStorageManager {
   /**
    * 导入数据
    */
-  importData(jsonData) {
+  async importData(jsonData) {
     try {
       const data = JSON.parse(jsonData);
       
       if (data.trainingRecords && Array.isArray(data.trainingRecords)) {
         // 合并训练记录，避免重复
-        const existingRecords = this.getTrainingRecords();
+        const existingRecords = await this.getTrainingRecords();
         const existingIds = new Set(existingRecords.map(r => r.id));
         
         const newRecords = data.trainingRecords.filter(r => !existingIds.has(r.id));
@@ -289,7 +293,7 @@ class LocalStorageManager {
           allRecords.splice(this.maxRecords);
         }
         
-        this.setItem('training_records', allRecords);
+        await this.setItem('training_records', allRecords);
         
         return {
           success: true,
@@ -308,10 +312,21 @@ class LocalStorageManager {
   /**
    * 清空所有数据
    */
-  clearAllData() {
+  async clearAllData() {
     try {
-      const keys = Object.keys(localStorage).filter(key => key.startsWith(this.prefix));
-      keys.forEach(key => localStorage.removeItem(key));
+      if (this.isNativeApp) {
+        // APP 环境：获取所有 keys 并删除
+        const { keys } = await Preferences.keys();
+        const ourKeys = keys.filter(key => key.startsWith(this.prefix));
+        
+        for (const key of ourKeys) {
+          await Preferences.remove({ key });
+        }
+      } else {
+        // Web 环境：使用 localStorage
+        const keys = Object.keys(localStorage).filter(key => key.startsWith(this.prefix));
+        keys.forEach(key => localStorage.removeItem(key));
+      }
       return true;
     } catch (error) {
       console.error('Failed to clear all data:', error);
@@ -322,8 +337,8 @@ class LocalStorageManager {
   /**
    * 获取用户设置
    */
-  getUserSettings() {
-    return this.getItem('user_settings', {
+  async getUserSettings() {
+    return await this.getItem('user_settings', {
       theme: 'light',
       language: 'zh-CN',
       notifications: true,
@@ -334,11 +349,11 @@ class LocalStorageManager {
   /**
    * 保存用户设置
    */
-  saveUserSettings(settings) {
+  async saveUserSettings(settings) {
     try {
-      const currentSettings = this.getUserSettings();
+      const currentSettings = await this.getUserSettings();
       const newSettings = { ...currentSettings, ...settings };
-      this.setItem('user_settings', newSettings);
+      await this.setItem('user_settings', newSettings);
       return true;
     } catch (error) {
       console.error('Failed to save user settings:', error);
@@ -354,19 +369,36 @@ class LocalStorageManager {
   }
 
   /**
-   * 设置项目到 localStorage
+   * 设置项目到存储
    */
-  setItem(key, value) {
+  async setItem(key, value) {
     try {
       const fullKey = this.prefix + key;
       const serializedValue = JSON.stringify(value);
-      localStorage.setItem(fullKey, serializedValue);
+      
+      if (this.isNativeApp) {
+        // APP 环境使用 Capacitor Preferences
+        await Preferences.set({
+          key: fullKey,
+          value: serializedValue
+        });
+      } else {
+        // Web 环境使用 localStorage
+        localStorage.setItem(fullKey, serializedValue);
+      }
     } catch (error) {
-      if (error.name === 'QuotaExceededError') {
+      if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
         // 存储空间不足，清理旧数据
-        this.cleanOldRecords(30); // 清理30天前的数据
+        await this.cleanOldRecords(30); // 清理30天前的数据
         try {
-          localStorage.setItem(this.prefix + key, JSON.stringify(value));
+          if (this.isNativeApp) {
+            await Preferences.set({
+              key: this.prefix + key,
+              value: JSON.stringify(value)
+            });
+          } else {
+            localStorage.setItem(this.prefix + key, JSON.stringify(value));
+          }
         } catch (retryError) {
           throw new Error('存储空间不足，请清理数据后重试');
         }
@@ -377,20 +409,29 @@ class LocalStorageManager {
   }
 
   /**
-   * 从 localStorage 获取项目
+   * 从存储获取项目
    */
-  getItem(key, defaultValue = null) {
+  async getItem(key, defaultValue = null) {
     try {
       const fullKey = this.prefix + key;
-      const item = localStorage.getItem(fullKey);
+      let item;
       
-      if (item === null) {
+      if (this.isNativeApp) {
+        // APP 环境使用 Capacitor Preferences
+        const result = await Preferences.get({ key: fullKey });
+        item = result.value;
+      } else {
+        // Web 环境使用 localStorage
+        item = localStorage.getItem(fullKey);
+      }
+      
+      if (item === null || item === undefined) {
         return defaultValue;
       }
       
       return JSON.parse(item);
     } catch (error) {
-      console.error('Failed to get item from localStorage:', error);
+      console.error('Failed to get item from storage:', error);
       return defaultValue;
     }
   }
@@ -398,26 +439,45 @@ class LocalStorageManager {
   /**
    * 删除项目
    */
-  removeItem(key) {
+  async removeItem(key) {
     try {
       const fullKey = this.prefix + key;
-      localStorage.removeItem(fullKey);
+      
+      if (this.isNativeApp) {
+        // APP 环境使用 Capacitor Preferences
+        await Preferences.remove({ key: fullKey });
+      } else {
+        // Web 环境使用 localStorage
+        localStorage.removeItem(fullKey);
+      }
       return true;
     } catch (error) {
-      console.error('Failed to remove item from localStorage:', error);
+      console.error('Failed to remove item from storage:', error);
       return false;
     }
   }
 
   /**
-   * 检查 localStorage 可用性
+   * 检查存储可用性
    */
-  isAvailable() {
+  async isAvailable() {
     try {
       const testKey = this.prefix + 'test';
-      localStorage.setItem(testKey, 'test');
-      localStorage.removeItem(testKey);
-      return true;
+      const testValue = 'test';
+      
+      if (this.isNativeApp) {
+        // APP 环境测试 Capacitor Preferences
+        await Preferences.set({ key: testKey, value: testValue });
+        const result = await Preferences.get({ key: testKey });
+        await Preferences.remove({ key: testKey });
+        return result.value === testValue;
+      } else {
+        // Web 环境测试 localStorage
+        localStorage.setItem(testKey, testValue);
+        const retrieved = localStorage.getItem(testKey);
+        localStorage.removeItem(testKey);
+        return retrieved === testValue;
+      }
     } catch (error) {
       return false;
     }
@@ -426,15 +486,30 @@ class LocalStorageManager {
   /**
    * 获取存储使用情况
    */
-  getStorageUsage() {
+  async getStorageUsage() {
     try {
       let totalSize = 0;
       let itemCount = 0;
       
-      for (let key in localStorage) {
-        if (key.startsWith(this.prefix)) {
-          totalSize += localStorage[key].length;
-          itemCount++;
+      if (this.isNativeApp) {
+        // APP 环境：获取所有 keys 并计算大小
+        const { keys } = await Preferences.keys();
+        const ourKeys = keys.filter(key => key.startsWith(this.prefix));
+        
+        for (const key of ourKeys) {
+          const result = await Preferences.get({ key });
+          if (result.value) {
+            totalSize += result.value.length;
+            itemCount++;
+          }
+        }
+      } else {
+        // Web 环境：使用 localStorage
+        for (let key in localStorage) {
+          if (key.startsWith(this.prefix)) {
+            totalSize += localStorage[key].length;
+            itemCount++;
+          }
         }
       }
       
@@ -476,9 +551,9 @@ export default storageManager;
 export { LocalStorageManager };
 
 // 兼容性函数 - 为了保持向后兼容
-export function saveUserData(data) {
+export async function saveUserData(data) {
   try {
-    storageManager.setItem('user_data', data);
+    await storageManager.setItem('user_data', data);
     return { success: true };
   } catch (error) {
     console.error('Failed to save user data:', error);
@@ -486,18 +561,18 @@ export function saveUserData(data) {
   }
 }
 
-export function loadUserData() {
+export async function loadUserData() {
   try {
-    return storageManager.getItem('user_data', null);
+    return await storageManager.getItem('user_data', null);
   } catch (error) {
     console.error('Failed to load user data:', error);
     return null;
   }
 }
 
-export function downloadData() {
+export async function downloadData() {
   try {
-    return storageManager.exportData();
+    return await storageManager.exportData();
   } catch (error) {
     console.error('Failed to download data:', error);
     throw error;

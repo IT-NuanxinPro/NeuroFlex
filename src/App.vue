@@ -3,6 +3,13 @@
     <!-- 开屏动画（仅原生环境） -->
     <AppSplash v-if="showSplash" @complete="onSplashComplete" />
 
+    <!-- 隐私协议对话框 -->
+    <PrivacyDialog 
+      ref="privacyDialog"
+      @accepted="handlePrivacyAccepted"
+      @declined="handlePrivacyDeclined"
+    />
+
     <router-view v-slot="{ Component, route }">
       <transition :name="transitionName" mode="out-in">
         <component :is="Component" :key="getRouteKey(route)" />
@@ -30,6 +37,8 @@ import { isPC } from '@/utils/device'
 import { useVersionCheck } from '@/composables/useVersionCheck'
 import UpdateDialog from '@/components/UpdateDialog.vue'
 import AppSplash from '@/components/AppSplash.vue'
+import PrivacyDialog from '@/components/PrivacyDialog.vue'
+import permissionManager from '@/utils/permissions'
 
 const router = useRouter()
 const route = useRoute()
@@ -37,13 +46,59 @@ const transitionName = ref('none')
 
 // 开屏动画状态（所有环境都显示）
 const showSplash = ref(true)
+const privacyDialog = ref(null)
 
 // 版本检测
 const { currentVersion, latestVersion, hasUpdate, updateInfo, checkForUpdates } = useVersionCheck()
 const showUpdateDialog = ref(false)
 
+// 处理隐私协议同意
+async function handlePrivacyAccepted() {
+  console.log('✅ 用户同意隐私协议')
+  
+  // 初始化权限
+  try {
+    const permissions = await permissionManager.initializePermissions()
+    if (permissions.success) {
+      console.log('✅ 权限初始化成功')
+    } else {
+      console.warn('⚠️ 部分权限未授予，但应用可以继续运行')
+    }
+  } catch (error) {
+    console.error('权限初始化失败:', error)
+  }
+}
+
+// 处理隐私协议拒绝
+function handlePrivacyDeclined() {
+  console.log('❌ 用户拒绝隐私协议')
+  
+  if (Capacitor.isNativePlatform()) {
+    // APP 环境下，用户拒绝协议则提示重新考虑
+    if (confirm('拒绝隐私协议将无法使用应用功能。是否重新考虑？')) {
+      // 重新显示协议
+      privacyDialog.value?.show()
+    } else {
+      // 显示警告信息
+      alert('应用需要您的同意才能正常运行。您可以随时在设置中查看隐私协议。')
+    }
+  }
+}
+
 // 开屏动画完成
-function onSplashComplete() {
+async function onSplashComplete() {
+  // 如果是 APP 环境，检查隐私协议
+  if (Capacitor.isNativePlatform()) {
+    await privacyDialog.value?.showIfNeeded()
+  } else {
+    // Web 环境直接初始化权限
+    try {
+      await permissionManager.initializePermissions()
+    } catch (error) {
+      console.error('权限初始化失败:', error)
+    }
+  }
+  
   showSplash.value = false
 }
 

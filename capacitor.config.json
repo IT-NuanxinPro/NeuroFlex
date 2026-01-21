@@ -12,14 +12,12 @@
       "overlaysWebView": false
     },
     "SplashScreen": {
-      "launchShowDuration": 2000,
+      "launchShowDuration": 0,
       "launchAutoHide": true,
       "backgroundColor": "#0f0f1e",
-      "androidSplashResourceName": "splash",
-      "androidScaleType": "CENTER_CROP",
       "showSpinner": false,
-      "splashFullScreen": true,
-      "splashImmersive": true
+      "splashFullScreen": false,
+      "splashImmersive": false
     },
     "Keyboard": {
       "resize": "ionic",

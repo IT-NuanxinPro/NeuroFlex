@@ -166,6 +166,14 @@
               </svg>
               导出数据
             </button>
+            <button class="action-button" @click="triggerImportData">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 14 12 9 7 14" />
+                <line x1="12" y1="9" x2="12" y2="21" />
+              </svg>
+              导入数据
+            </button>
             <button class="action-button danger" @click="clearHistory">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path
@@ -175,6 +183,15 @@
               清空记录
             </button>
           </div>
+          
+          <!-- 隐藏的文件输入 -->
+          <input
+            ref="importInput"
+            type="file"
+            accept=".json"
+            style="display: none"
+            @change="handleImportData"
+          />
         </div>
       </div>
     </main>
@@ -249,7 +266,7 @@ import 'vant/lib/field/style'
 import 'vant/lib/cell-group/style'
 import 'vant/lib/button/style'
 import UserAvatar from '@/components/UserAvatar.vue'
-import { downloadData } from '@/utils/storage'
+import storageManager from '@/utils/storage'
 import { isPC } from '@/utils/device'
 
 const router = useRouter()
@@ -260,6 +277,7 @@ const showEditModal = ref(false)
 const editedName = ref(userStore.profile.name)
 const saving = ref(false)
 const avatarInput = ref(null)
+const importInput = ref(null)
 
 // 检测是否为PC端
 const isPCDevice = ref(isPC())
@@ -284,6 +302,10 @@ function goToLogin() {
 
 function goToRegister() {
   router.push('/register')
+}
+
+function goToDownload() {
+  router.push('/download')
 }
 
 // 退出登录
@@ -395,20 +417,101 @@ function handleAvatarUpload(event) {
   event.target.value = ''
 }
 
-function exportData() {
-  const success = downloadData('neuroflex-backup.json')
-  if (success) {
+async function exportData() {
+  try {
+    const data = await storageManager.exportData()
+    
+    // 创建下载链接
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `neuroflex-backup-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
     alert('数据已成功导出！')
-  } else {
+  } catch (error) {
+    console.error('导出失败:', error)
     alert('导出失败，请重试')
   }
 }
 
-function clearHistory() {
+function goToDownload() {
+  router.push('/download')
+}
+
+async function clearHistory() {
   if (confirm('确定要清空所有训练记录吗？此操作不可恢复！')) {
-    userStore.clearHistory()
-    alert('训练记录已清空')
+    try {
+      // 清空本地存储的训练记录
+      const records = await storageManager.getTrainingRecords()
+      const deletedCount = records.length
+      
+      // 清空训练记录
+      await storageManager.setItem('training_records', [])
+      
+      // 同时清空用户 store 中的历史记录
+      userStore.clearHistory()
+      
+      alert(`已清空 ${deletedCount} 条训练记录`)
+    } catch (error) {
+      console.error('清空记录失败:', error)
+      alert('清空记录失败，请重试')
+    }
   }
+}
+
+function triggerImportData() {
+  importInput.value?.click()
+}
+
+async function handleImportData(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.type.includes('json')) {
+    alert('请选择 JSON 格式的备份文件')
+    return
+  }
+
+  // 验证文件大小（限制10MB）
+  if (file.size > 10 * 1024 * 1024) {
+    alert('文件大小不能超过10MB')
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const jsonData = e.target.result
+      const result = await storageManager.importData(jsonData)
+      
+      if (result.success) {
+        alert(`数据导入成功！\n导入了 ${result.imported} 条新记录\n总计 ${result.total} 条记录`)
+        
+        // 刷新用户统计数据
+        userStore.refreshStats()
+      } else {
+        alert('数据导入失败，请检查文件格式')
+      }
+    } catch (error) {
+      console.error('导入数据失败:', error)
+      alert('数据导入失败：' + error.message)
+    }
+  }
+  
+  reader.onerror = () => {
+    alert('文件读取失败，请重试')
+  }
+  
+  reader.readAsText(file)
+  
+  // 清空input，允许重复选择同一文件
+  event.target.value = ''
 }
 </script>
 
@@ -982,13 +1085,22 @@ function clearHistory() {
   display: grid;
   gap: $spacing-lg;
 
-  // PC端使用原来的两列布局
-  grid-template-columns: repeat(2, 1fr);
+  // PC端使用三列布局
+  grid-template-columns: repeat(3, 1fr);
 
   // 移动端改为单列布局，按钮更紧凑
   @include mobile {
     grid-template-columns: 1fr;
     gap: $spacing-md;
+  }
+  
+  // 中等屏幕使用两列布局
+  @media (max-width: 900px) and (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+    
+    .action-button:last-child {
+      grid-column: 1 / -1;
+    }
   }
 }
 

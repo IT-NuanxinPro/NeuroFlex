@@ -61,6 +61,27 @@
       </div>
 
       <div class="settings-section">
+        <h2 class="section-title">隐私与权限</h2>
+
+        <button class="action-button info" @click="showPrivacyDialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+          查看隐私协议
+        </button>
+
+        <button class="action-button info" @click="checkPermissions">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <circle cx="12" cy="16" r="1" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          权限管理
+        </button>
+      </div>
+
+      <div class="settings-section">
         <h2 class="section-title">数据管理</h2>
 
         <button class="action-button" @click="clearHistory">
@@ -91,17 +112,78 @@
         </div>
       </div>
     </main>
+
+    <!-- 隐私协议对话框 -->
+    <PrivacyDialog 
+      ref="privacyDialog"
+      @accepted="handlePrivacyAccepted"
+      @declined="handlePrivacyDeclined"
+    />
+
+    <!-- 权限状态对话框 -->
+    <van-popup
+      v-model:show="showPermissionDialog"
+      position="center"
+      :style="{ width: '90%', maxWidth: '400px' }"
+      round
+      closeable
+      class="permission-dialog"
+    >
+      <div class="permission-content">
+        <div class="permission-header">
+          <div class="permission-icon">🔐</div>
+          <h2 class="permission-title">权限状态</h2>
+        </div>
+
+        <div class="permission-body">
+          <div v-for="(permission, key) in permissionStatus" :key="key" class="permission-item">
+            <div class="permission-info">
+              <div class="permission-name">{{ getPermissionName(key) }}</div>
+              <div class="permission-desc">{{ permission.description }}</div>
+            </div>
+            <div class="permission-status" :class="{ granted: permission.granted }">
+              <svg v-if="permission.granted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              <span>{{ permission.granted ? '已授权' : '未授权' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="permission-actions">
+          <van-button @click="showPermissionDialog = false">
+            关闭
+          </van-button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/config'
 import { useUserStore } from '@/stores/user'
+import { Popup as VanPopup, Button as VanButton } from 'vant'
+import 'vant/lib/popup/style'
+import 'vant/lib/button/style'
+import PrivacyDialog from '@/components/PrivacyDialog.vue'
+import permissionManager from '@/utils/permissions'
 
 const router = useRouter()
 const configStore = useConfigStore()
 const userStore = useUserStore()
+
+const privacyDialog = ref(null)
+const showPermissionDialog = ref(false)
+const permissionStatus = ref({})
 
 function goBack() {
   router.back()
@@ -123,6 +205,42 @@ function resetSettings() {
     configStore.resetConfig()
     alert('设置已恢复默认')
   }
+}
+
+// 显示隐私协议
+function showPrivacyDialog() {
+  privacyDialog.value?.show()
+}
+
+// 处理隐私协议同意
+function handlePrivacyAccepted() {
+  alert('感谢您同意隐私协议！')
+}
+
+// 处理隐私协议拒绝
+function handlePrivacyDeclined() {
+  // 在设置页面中，用户可以选择不同意，但不会影响应用使用
+}
+
+// 检查权限状态
+async function checkPermissions() {
+  try {
+    const permissions = await permissionManager.getPermissionsSummary()
+    permissionStatus.value = permissions
+    showPermissionDialog.value = true
+  } catch (error) {
+    console.error('获取权限状态失败:', error)
+    alert('获取权限状态失败，请重试')
+  }
+}
+
+// 获取权限名称
+function getPermissionName(key) {
+  const names = {
+    storage: '存储权限',
+    network: '网络权限'
+  }
+  return names[key] || key
 }
 </script>
 
@@ -270,6 +388,14 @@ function resetSettings() {
     border-color: $accent-error;
     color: $accent-error;
   }
+
+  &.info {
+    &:hover {
+      background: rgba(0, 212, 255, 0.1);
+      border-color: $accent-primary;
+      color: $accent-primary;
+    }
+  }
 }
 
 .about-info {
@@ -289,6 +415,95 @@ function resetSettings() {
     &:last-child {
       margin-bottom: 0;
     }
+  }
+}
+
+// 权限对话框样式
+.permission-dialog {
+  :deep(.van-popup) {
+    background: $bg-secondary;
+    border: 1px solid $glass-border;
+    box-shadow: $glass-shadow;
+  }
+}
+
+.permission-content {
+  padding: $spacing-xl;
+}
+
+.permission-header {
+  text-align: center;
+  margin-bottom: $spacing-lg;
+
+  .permission-icon {
+    font-size: 48px;
+    margin-bottom: $spacing-md;
+  }
+
+  .permission-title {
+    font-size: $font-xl;
+    font-weight: $font-bold;
+    color: $text-primary;
+    margin: 0;
+  }
+}
+
+.permission-body {
+  margin-bottom: $spacing-lg;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid $glass-border;
+  border-radius: $radius-md;
+
+  .permission-info {
+    flex: 1;
+
+    .permission-name {
+      font-size: $font-base;
+      font-weight: $font-semibold;
+      color: $text-primary;
+      margin-bottom: $spacing-xs;
+    }
+
+    .permission-desc {
+      font-size: $font-sm;
+      color: $text-secondary;
+    }
+  }
+
+  .permission-status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    color: $accent-error;
+
+    &.granted {
+      color: $accent-success;
+    }
+
+    span {
+      font-size: $font-sm;
+      font-weight: $font-medium;
+    }
+  }
+}
+
+.permission-actions {
+  text-align: center;
+
+  :deep(.van-button) {
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+    border: none;
+    color: $text-primary;
+    border-radius: $radius-md;
+    padding: $spacing-md $spacing-xl;
   }
 }
 </style>

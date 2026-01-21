@@ -15,6 +15,28 @@
       </div>
     </header>
 
+    <!-- 下载横幅（仅Web/PWA环境显示，APP中隐藏） -->
+    <div v-if="!isNativeApp && !isPCDevice" class="download-banner" @click="goToDownload">
+      <div class="banner-content">
+        <div class="banner-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </div>
+        <div class="banner-text">
+          <div class="banner-title">下载 NeuroFlex APP</div>
+          <div class="banner-subtitle">获得更流畅的训练体验</div>
+        </div>
+        <div class="banner-arrow">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
     <!-- 训练模块网格 -->
     <main class="training-grid-container" :class="{ 'pc-layout': isPCDevice }">
       <div class="training-grid">
@@ -41,6 +63,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
 import { isPC } from '@/utils/device'
 import {
@@ -57,6 +80,9 @@ const router = useRouter()
 
 // 检测是否为PC端
 const isPCDevice = ref(isPC())
+
+// 检测是否为原生应用
+const isNativeApp = ref(Capacitor.isNativePlatform())
 
 function handleResize() {
   isPCDevice.value = isPC()
@@ -139,6 +165,10 @@ function goToSettings() {
   console.log('点击设置按钮')
   router.push('/settings')
 }
+
+function goToDownload() {
+  router.push('/download')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -180,6 +210,106 @@ function goToSettings() {
     @media (hover: hover) and (pointer: fine) {
       &:hover {
         background: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+}
+
+.download-banner {
+  @include click-feedback;
+  margin: $spacing-md $spacing-lg;
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-base;
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(102, 126, 234, 0.15) 100%);
+    border-color: rgba(0, 212, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 212, 255, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  .banner-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-full;
+    background: rgba(0, 212, 255, 0.2);
+    @include flex-center;
+    color: $accent-primary;
+
+    svg {
+      stroke-width: 2.5;
+    }
+  }
+
+  .banner-text {
+    flex: 1;
+
+    .banner-title {
+      font-size: $font-base;
+      font-weight: $font-semibold;
+      color: $text-primary;
+      margin-bottom: 2px;
+    }
+
+    .banner-subtitle {
+      font-size: $font-sm;
+      color: $text-secondary;
+    }
+  }
+
+  .banner-arrow {
+    flex-shrink: 0;
+    color: $accent-primary;
+    opacity: 0.7;
+    transition: all $transition-base;
+
+    svg {
+      stroke-width: 2;
+    }
+  }
+
+  &:hover .banner-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  // 移动端优化
+  @include mobile {
+    margin: $spacing-sm $spacing-md;
+    padding: $spacing-md;
+
+    .banner-content {
+      gap: $spacing-sm;
+    }
+
+    .banner-icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .banner-text {
+      .banner-title {
+        font-size: $font-sm;
+      }
+
+      .banner-subtitle {
+        font-size: $font-xs;
       }
     }
   }
