@@ -18,6 +18,7 @@
     "app:version:minor": "node scripts/sync-version.js --bump minor --app-only",
     "app:version:major": "node scripts/sync-version.js --bump major --app-only",
     "app:version:set": "node scripts/sync-version.js --app-only",
+    "release:android": "node scripts/release-android.js",
     "release:apk": "node scripts/build-and-release.js --release",
     "cap:sync": "npx cap sync",
     "cap:run:android": "npx cap run android"
