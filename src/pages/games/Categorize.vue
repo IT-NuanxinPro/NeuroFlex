@@ -8,10 +8,11 @@
       </button>
       <h1 class="page-title">规则导向分类</h1>
       <button v-if="!isTraining" class="help-button" @click="showGuide = true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <circle cx="12" cy="12" r="10" stroke-width="2" />
           <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
         </svg>
+        <span>规则</span>
       </button>
     </header>
 
@@ -498,21 +499,33 @@ onUnmounted(() => {
   .help-button {
     @include button-reset;
     @include click-feedback;
-    width: 40px;
     height: 40px;
+    padding: 0 $spacing-md;
     border-radius: $radius-full;
     background: rgba(0, 212, 255, 0.1);
     border: 1px solid rgba(0, 212, 255, 0.3);
     color: $accent-primary;
-    @include flex-center;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
     position: absolute;
     right: $spacing-lg;
     transition: all $transition-base;
+    font-size: $font-sm;
+    font-weight: $font-medium;
 
     &:hover {
       background: rgba(0, 212, 255, 0.2);
       border-color: $accent-primary;
-      transform: scale(1.1);
+      transform: scale(1.05);
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    span {
+      white-space: nowrap;
     }
   }
 }

@@ -105,6 +105,16 @@
 
       <div class="settings-section">
         <h2 class="section-title">关于</h2>
+        
+        <button class="action-button info" @click="checkForUpdates">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          检查版本更新
+        </button>
+        
         <div class="about-info">
           <p><strong>版本:</strong> {{ configStore.appConfig.version }}</p>
           <p><strong>应用名称:</strong> NeuroFlex 认知训练系统</p>
@@ -124,9 +134,9 @@
     <van-popup
       v-model:show="showPermissionDialog"
       position="center"
-      :style="{ width: '90%', maxWidth: '400px' }"
+      :style="{ width: '90%', maxWidth: '400px', background: 'var(--bg-secondary)' }"
       round
-      closeable
+      :close-on-click-overlay="false"
       class="permission-dialog"
     >
       <div class="permission-content">
@@ -169,8 +179,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 import { useConfigStore } from '@/stores/config'
 import { useUserStore } from '@/stores/user'
+import { useVersionCheck } from '@/composables/useVersionCheck'
 import { Popup as VanPopup, Button as VanButton } from 'vant'
 import 'vant/lib/popup/style'
 import 'vant/lib/button/style'
@@ -180,6 +192,7 @@ import permissionManager from '@/utils/permissions'
 const router = useRouter()
 const configStore = useConfigStore()
 const userStore = useUserStore()
+const { hasUpdate, updateInfo, checkForUpdates: checkVersionUpdates, goToDownload } = useVersionCheck()
 
 const privacyDialog = ref(null)
 const showPermissionDialog = ref(false)
@@ -191,20 +204,6 @@ function goBack() {
 
 function saveConfig() {
   configStore.saveConfig()
-}
-
-function clearHistory() {
-  if (confirm('确定要清除所有训练记录吗？此操作不可恢复。')) {
-    userStore.clearHistory()
-    alert('训练记录已清除')
-  }
-}
-
-function resetSettings() {
-  if (confirm('确定要恢复默认设置吗？')) {
-    configStore.resetConfig()
-    alert('设置已恢复默认')
-  }
 }
 
 // 显示隐私协议
@@ -231,6 +230,54 @@ async function checkPermissions() {
   } catch (error) {
     console.error('获取权限状态失败:', error)
     alert('获取权限状态失败，请重试')
+  }
+}
+
+function clearHistory() {
+  if (confirm('确定要清除所有训练记录吗？此操作不可恢复。')) {
+    userStore.clearHistory()
+    alert('训练记录已清除')
+  }
+}
+
+function resetSettings() {
+  if (confirm('确定要恢复默认设置吗？')) {
+    configStore.resetConfig()
+    alert('设置已恢复默认')
+  }
+}
+
+// 检查版本更新
+async function checkForUpdates() {
+  try {
+    await checkVersionUpdates()
+    
+    if (hasUpdate.value) {
+      const confirmUpdate = confirm(
+        `发现新版本 v${updateInfo.value?.version || '未知'}！\n\n` +
+        `当前版本：v${configStore.appConfig.version}\n` +
+        `最新版本：v${updateInfo.value?.version || '未知'}\n\n` +
+        `是否立即下载更新？`
+      )
+      
+      if (confirmUpdate) {
+        // 在 APP 环境下，打开外部浏览器下载
+        if (Capacitor.isNativePlatform()) {
+          if (updateInfo.value?.downloadUrl) {
+            window.open(updateInfo.value.downloadUrl, '_system')
+          } else {
+            window.open('/download', '_system')
+          }
+        } else {
+          goToDownload()
+        }
+      }
+    } else {
+      alert('当前已是最新版本！')
+    }
+  } catch (error) {
+    console.error('检查更新失败:', error)
+    alert('检查更新失败，请稍后重试')
   }
 }
 
@@ -302,20 +349,20 @@ function getPermissionName(key) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
   margin-bottom: $spacing-md;
 
   .setting-info {
     flex: 1;
 
     .setting-label {
-      font-size: $font-base;
+      font-size: $font-sm;
       font-weight: $font-medium;
       margin-bottom: $spacing-xs;
     }
 
     .setting-description {
-      font-size: $font-sm;
+      font-size: $font-xs;
       color: $text-secondary;
     }
   }
@@ -324,8 +371,8 @@ function getPermissionName(key) {
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 28px;
+  width: 44px;
+  height: 24px;
 
   input {
     opacity: 0;
@@ -336,7 +383,7 @@ function getPermissionName(key) {
       background-color: $accent-primary;
 
       &:before {
-        transform: translateX(22px);
+        transform: translateX(20px);
       }
     }
   }
@@ -350,15 +397,15 @@ function getPermissionName(key) {
     bottom: 0;
     background-color: rgba(255, 255, 255, 0.1);
     transition: $transition-base;
-    border-radius: 28px;
+    border-radius: 24px;
 
     &:before {
       position: absolute;
       content: '';
-      height: 20px;
-      width: 20px;
-      left: 4px;
-      bottom: 4px;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
       background-color: white;
       transition: $transition-base;
       border-radius: 50%;
@@ -368,33 +415,26 @@ function getPermissionName(key) {
 
 .action-button {
   @include button-reset;
-  @include click-feedback;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: $spacing-sm;
   width: 100%;
-  padding: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
   margin-bottom: $spacing-md;
   border-radius: $radius-md;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: $text-primary;
   font-weight: $font-medium;
-  transition: all $transition-base;
+  font-size: $font-sm;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: $accent-error;
-    color: $accent-error;
+  &:focus {
+    outline: none;
   }
 
   &.info {
-    &:hover {
-      background: rgba(0, 212, 255, 0.1);
-      border-color: $accent-primary;
-      color: $accent-primary;
-    }
+    // info 类型也保持相同样式
   }
 }
 

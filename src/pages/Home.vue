@@ -3,7 +3,7 @@
     <!-- 移动端顶部栏 -->
     <header v-if="!isPCDevice" class="top-bar">
       <NeuroFlexLogo variant="horizontal" size="medium" :animated="true" />
-      <div class="user-actions">
+      <div v-if="isNativeApp" class="user-actions">
         <button class="icon-button" aria-label="设置" @click="goToSettings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="12" cy="12" r="3"></circle>
@@ -65,7 +65,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Capacitor } from '@capacitor/core'
 import NeuroFlexLogo from '@/components/NeuroFlexLogo.vue'
-import { isPC } from '@/utils/device'
+import { isPC, resetDeviceCache } from '@/utils/device'
 import {
   SchulteIcon,
   StroopIcon,
@@ -85,12 +85,21 @@ const isPCDevice = ref(isPC())
 const isNativeApp = ref(Capacitor.isNativePlatform())
 
 function handleResize() {
+  resetDeviceCache()
   isPCDevice.value = isPC()
 }
 
 onMounted(() => {
   isPCDevice.value = isPC()
   window.addEventListener('resize', handleResize)
+  
+  // 调试信息
+  console.log('🔍 Home 页面环境检测:')
+  console.log('  isNativeApp:', isNativeApp.value)
+  console.log('  isPCDevice:', isPCDevice.value)
+  console.log('  Capacitor.isNativePlatform():', Capacitor.isNativePlatform())
+  console.log('  User Agent:', navigator.userAgent)
+  console.log('  显示下载横幅:', !isNativeApp.value && !isPCDevice.value)
 })
 
 onUnmounted(() => {

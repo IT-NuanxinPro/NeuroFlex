@@ -1,4 +1,5 @@
 import { ref, onMounted } from 'vue'
+import { Capacitor } from '@capacitor/core'
 
 const currentVersion = ref('')
 const latestVersion = ref('')
@@ -9,7 +10,10 @@ const checking = ref(false)
 export function useVersionCheck() {
   // 获取当前版本（从package.json或构建时注入）
   function getCurrentVersion() {
-    // 这里可以从环境变量或构建时注入的版本信息获取
+    // 在 APP 环境下，应该获取 APP 版本而不是 package.json 版本
+    if (Capacitor.isNativePlatform()) {
+      return '1.0.1' // 当前 APP 版本
+    }
     return import.meta.env.VITE_APP_VERSION || '1.1.0'
   }
 
@@ -60,18 +64,29 @@ export function useVersionCheck() {
   // 跳转到下载页面
   function goToDownload() {
     if (updateInfo.value?.downloadUrl) {
-      window.open(updateInfo.value.downloadUrl, '_blank')
+      // 在 APP 环境下，打开外部浏览器下载
+      if (Capacitor.isNativePlatform()) {
+        window.open(updateInfo.value.downloadUrl, '_system')
+      } else {
+        window.open(updateInfo.value.downloadUrl, '_blank')
+      }
     } else {
       // 跳转到下载页面
-      window.open('/download', '_blank')
+      if (Capacitor.isNativePlatform()) {
+        window.open('/download', '_system')
+      } else {
+        window.open('/download', '_blank')
+      }
     }
   }
 
   // 初始化
   onMounted(() => {
     currentVersion.value = getCurrentVersion()
-    // 自动检查更新
-    checkForUpdates()
+    // 只在 APP 环境下自动检查更新
+    if (Capacitor.isNativePlatform()) {
+      checkForUpdates()
+    }
   })
 
   return {

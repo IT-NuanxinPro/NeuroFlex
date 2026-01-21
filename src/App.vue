@@ -113,8 +113,17 @@ function getRouteKey(route) {
 // 处理版本更新
 function handleUpdate() {
   showUpdateDialog.value = false
-  // 跳转到下载页面
-  window.open('/download', '_blank')
+  // 在 APP 环境下，打开外部浏览器下载
+  if (Capacitor.isNativePlatform()) {
+    if (updateInfo.value?.downloadUrl) {
+      window.open(updateInfo.value.downloadUrl, '_system')
+    } else {
+      window.open('/download', '_system')
+    }
+  } else {
+    // Web 环境跳转到下载页面
+    window.open('/download', '_blank')
+  }
 }
 
 function handleLater() {
@@ -125,7 +134,8 @@ function handleLater() {
 
 // 监听版本更新
 watch(hasUpdate, (newValue) => {
-  if (newValue) {
+  // 只在 APP 环境下显示更新弹窗
+  if (newValue && Capacitor.isNativePlatform()) {
     // 检查是否设置了稍后提醒
     const remindLater = localStorage.getItem('updateRemindLater')
     if (remindLater) {

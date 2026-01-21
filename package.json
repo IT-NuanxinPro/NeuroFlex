@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:apk": "node scripts/build-apk.js",
+    "build:apk": "node scripts/build-and-release.js",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
@@ -18,20 +18,13 @@
     "app:version:minor": "node scripts/sync-version.js --bump minor --app-only",
     "app:version:major": "node scripts/sync-version.js --bump major --app-only",
     "app:version:set": "node scripts/sync-version.js --app-only",
-    "cap:init": "npx cap init",
-    "cap:add:android": "npx cap add android",
+    "release:apk": "node scripts/build-and-release.js --release",
     "cap:sync": "npx cap sync",
-    "cap:copy": "npx cap copy",
-    "cap:run:android": "npx cap run android",
-    "cap:build:android": "npx cap build android",
-    "cap:build": "DISABLE_CDN=true npm run build",
-    "android:dev": "npm run cap:build && npx cap copy android && npx cap run android",
-    "android:debug": "npm run version:sync && npm run cap:build && npx cap sync && cd android && ./gradlew assembleDebug && cd ..",
-    "android:release": "npm run version:sync && npm run cap:build && npx cap sync && cd android && ./gradlew assembleRelease && cd ..",
-    "android:release:clean": "npm run version:sync && npm run cap:build && npx cap sync && cd android && ./gradlew clean assembleRelease && cd .."
+    "cap:run:android": "npx cap run android"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^6.1.0",
+    "@capacitor/app": "^8.0.0",
     "@capacitor/preferences": "^8.0.0",
     "@supabase/supabase-js": "^2.38.0",
     "gsap": "^3.12.5",

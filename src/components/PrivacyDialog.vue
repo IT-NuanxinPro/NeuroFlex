@@ -2,7 +2,7 @@
   <van-popup
     v-model:show="visible"
     position="center"
-    :style="{ width: '90%', maxWidth: '400px' }"
+    :style="{ width: '90%', maxWidth: '400px', background: 'var(--bg-secondary)' }"
     round
     :close-on-click-overlay="false"
     :lock-scroll="true"
@@ -34,7 +34,7 @@
           <p>• <strong>存储权限</strong>：用于保存训练记录和应用设置</p>
           <p>• <strong>网络权限</strong>：用于检查应用更新（可选）</p>
           
-          <p class="privacy-note">
+          <p v-if="showActions" class="privacy-note">
             继续使用即表示您同意我们按照上述方式处理您的数据。
           </p>
         </div>
@@ -43,17 +43,27 @@
       <!-- 按钮 -->
       <div class="privacy-actions">
         <van-button
+          v-if="showActions"
           class="privacy-btn decline"
           @click="handleDecline"
         >
           不同意
         </van-button>
         <van-button
+          v-if="showActions"
           class="privacy-btn accept"
           type="primary"
           @click="handleAccept"
         >
           同意并继续
+        </van-button>
+        <van-button
+          v-if="!showActions"
+          class="privacy-btn close-only"
+          type="primary"
+          @click="handleClose"
+        >
+          关闭
         </van-button>
       </div>
     </div>
@@ -63,12 +73,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { App } from '@capacitor/app'
 import { Popup as VanPopup, Button as VanButton } from 'vant'
 import 'vant/lib/popup/style'
 import 'vant/lib/button/style'
 import storageManager from '@/utils/storage'
 
 const visible = ref(false)
+const showActions = ref(true) // 控制是否显示同意/不同意按钮
 
 const emit = defineEmits(['accepted', 'declined'])
 
@@ -102,6 +114,7 @@ async function showIfNeeded() {
 
   const accepted = await checkPrivacyAccepted()
   if (!accepted) {
+    showActions.value = true // 首次进入时显示同意/不同意按钮
     visible.value = true
   }
 }
@@ -114,13 +127,28 @@ async function handleAccept() {
 }
 
 // 拒绝协议
-function handleDecline() {
+async function handleDecline() {
   visible.value = false
   emit('declined')
+  
+  // 如果是 APP 环境且是首次进入，退出应用
+  if (Capacitor.isNativePlatform() && showActions.value) {
+    try {
+      await App.exitApp()
+    } catch (error) {
+      console.error('退出应用失败:', error)
+    }
+  }
+}
+
+// 关闭弹窗（仅查看模式）
+function handleClose() {
+  visible.value = false
 }
 
 // 手动显示协议（用于设置页面）
 function show() {
+  showActions.value = false // 设置页面查看时不显示同意/不同意按钮
   visible.value = true
 }
 
@@ -137,9 +165,10 @@ defineExpose({
 <style lang="scss" scoped>
 .privacy-dialog {
   :deep(.van-popup) {
-    background: $bg-secondary;
+    background: $bg-secondary !important;
     border: 1px solid $glass-border;
     box-shadow: $glass-shadow;
+    backdrop-filter: blur(20px);
   }
 }
 
@@ -148,6 +177,8 @@ defineExpose({
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  background: $bg-secondary;
+  border-radius: $radius-lg;
 }
 
 .privacy-header {
@@ -226,6 +257,17 @@ defineExpose({
     }
 
     &.accept {
+      background: linear-gradient(135deg, $accent-primary, $accent-secondary);
+      border: none;
+      color: $text-primary;
+
+      &:active {
+        opacity: 0.8;
+      }
+    }
+
+    &.close-only {
+      width: 100%;
       background: linear-gradient(135deg, $accent-primary, $accent-secondary);
       border: none;
       color: $text-primary;

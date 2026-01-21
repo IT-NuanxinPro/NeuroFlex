@@ -8,10 +8,11 @@
       </button>
       <h1 class="page-title">Stroop 训练</h1>
       <button v-if="!isTraining" class="help-button" @click="showGuide = true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <circle cx="12" cy="12" r="10" stroke-width="2" />
           <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round" />
         </svg>
+        <span>规则</span>
       </button>
       <div v-if="isTraining" class="score">{{ correctCount }}/{{ totalTrials }}</div>
     </header>
@@ -95,7 +96,7 @@
         <Transition name="buttons-fade" mode="out-in">
           <div :key="currentTrial" class="color-buttons" :class="{ disabled: isGameDisabled }">
             <button
-              v-for="color in colors"
+              v-for="color in shuffledColors"
               :key="color.name"
               class="color-button"
               :style="{ backgroundColor: color.value }"
@@ -175,6 +176,7 @@ const guideContent = {
   `
 }
 
+// 游戏状态
 const difficulty = ref('basic')
 const timeMode = ref('standard') // 'standard' 或 'timed'
 const gameState = ref('idle') // 'idle' | 'countdown' | 'active' | 'completed'
@@ -189,6 +191,7 @@ const totalTrials = ref(defaultTrials)
 const currentTrial = ref(0)
 const trialStartTime = ref(0) // 每个字的开始时间
 const timeoutCount = ref(0) // 超时次数
+const shuffledColors = ref([]) // 打乱后的颜色按钮顺序
 
 // 使用反应时间 Hook
 const reaction = useReactionTime()
@@ -297,6 +300,9 @@ function nextTrial() {
     const randomWord = otherColors[Math.floor(Math.random() * otherColors.length)]
     currentWord.value = randomWord.label
   }
+
+  // 每次都重新打乱颜色按钮顺序
+  shuffledColors.value = [...colors].sort(() => Math.random() - 0.5)
 
   currentTrial.value++
   trialStartTime.value = Date.now() // 记录这个字出现的时间
@@ -485,21 +491,33 @@ onUnmounted(() => {
   .help-button {
     @include button-reset;
     @include click-feedback;
-    width: 40px;
     height: 40px;
+    padding: 0 $spacing-md;
     border-radius: $radius-full;
     background: rgba(0, 212, 255, 0.1);
     border: 1px solid rgba(0, 212, 255, 0.3);
     color: $accent-primary;
-    @include flex-center;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
     position: absolute;
     right: $spacing-lg;
     transition: all $transition-base;
+    font-size: $font-sm;
+    font-weight: $font-medium;
 
     &:hover {
       background: rgba(0, 212, 255, 0.2);
       border-color: $accent-primary;
-      transform: scale(1.1);
+      transform: scale(1.05);
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    span {
+      white-space: nowrap;
     }
   }
 

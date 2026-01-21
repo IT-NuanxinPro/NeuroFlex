@@ -1,8 +1,8 @@
 {
-  "version": "1.0.1",
-  "versionCode": 10001,
-  "downloadUrl": "https://download-neuroflex.061129.xyz/android-v1.0.1/NeuroFlex-v1.0.1.apk",
-  "githubUrl": "https://github.com/IT-NuanxinPro/NeuroFlex/releases/download/android-v1.0.1/NeuroFlex-v1.0.1.apk",
-  "changelog": "🔧 NeuroFlex 1.0.1 更新\n\n✨ 新功能：\n• 完善的数据存储系统\n• 支持 APP 环境下的训练记录保存\n• 新增数据导入/导出功能\n• 优化移动端下载页面布局\n\n� 修复：\n• 修复 APP 环境下无法存储训练记录的问题\n• 修复应用图标显示异常\n• 优化存储管理器性能\n• 改进用户界面响应性",
-  "releaseDate": "2026-01-21T09:00:00Z"
+  "version": "1.0.2",
+  "versionCode": 10002,
+  "downloadUrl": "https://download-neuroflex.061129.xyz/android-v1.0.2/NeuroFlex-v1.0.2.apk",
+  "githubUrl": "https://github.com/IT-NuanxinPro/NeuroFlex/releases/download/android-v1.0.2/NeuroFlex-v1.0.2.apk",
+  "changelog": "🔧 NeuroFlex 1.0.2 更新\n\n✨ 新功能：\n• 修复版本更新检查问题\n• 优化 App 下载横幅显示\n• 改进设置页面版本检查功能\n• 修复 Stroop 训练颜色按钮顺序问题\n\n🐛 修复：\n• 修复隐私协议弹窗背景样式\n• 优化游戏规则按钮显示\n• 改进版本检查逻辑",
+  "releaseDate": "2026-01-21T12:00:00Z"
 }

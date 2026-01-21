@@ -244,6 +244,7 @@
       round
       closeable
       close-icon-position="top-right"
+      :close-on-click-overlay="false"
       :safe-area-inset-bottom="true"
       :style="{ height: '70%' }"
     >
@@ -276,6 +277,7 @@
       round
       closeable
       close-icon-position="top-right"
+      :close-on-click-overlay="false"
       :safe-area-inset-bottom="true"
       :style="{ height: '70%' }"
     >

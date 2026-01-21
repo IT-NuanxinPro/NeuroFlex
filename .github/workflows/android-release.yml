@@ -49,119 +49,72 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Complete cache cleanup (nuclear option)
+      - name: Install required Android SDK components
         run: |
-          # 删除所有可能的缓存目录
-          sudo rm -rf ~/.gradle/
-          sudo rm -rf ~/.android/
-          sudo rm -rf ~/.m2/
-          sudo rm -rf /tmp/gradle*
-          sudo rm -rf /home/runner/.gradle/
-          sudo rm -rf /home/runner/.android/
-          
-          # 清理项目中的所有构建产物
-          rm -rf android/.gradle/
-          rm -rf android/build/
-          rm -rf android/app/build/
-          rm -rf android/capacitor-android/build/
-          rm -rf android/capacitor-cordova-android-plugins/build/
-          
-          # 清理 Capacitor 缓存
-          rm -rf node_modules/.capacitor/
-          rm -rf .capacitor/
-          
-          # 清理 npm/pnpm 缓存
+          echo "Installing Android SDK components..."
+          sdkmanager \
+            "platforms;android-35" \     # ✅ 关键修改：必须是 35！
+            "build-tools;34.0.0" \
+            "platform-tools" \
+            "cmdline-tools;latest"
+          yes | sdkmanager --licenses >/dev/null
+
+      - name: Clean project (lightweight)
+        run: |
+          rm -rf android/.gradle android/build android/app/build
+          rm -rf android/capacitor-android android/capacitor-cordova-android-plugins
           pnpm store prune
-          
-          # 确保权限正确
           chmod +x android/gradlew
 
-      - name: Sync Capacitor (force clean sync)
-        run: |
-          # 手动清理 Capacitor 相关文件
-          rm -rf android/capacitor-cordova-android-plugins/
-          rm -rf android/capacitor-android/
-          
-          # 重新同步 Capacitor
-          npx cap sync android
+      - name: Sync Capacitor
+        run: npx cap sync android
 
       - name: Setup signing and Gradle properties
         run: |
           cd android
-          
-          # 使用debug keystore进行签名（生产环境应使用正式keystore）
-          echo "MYAPP_RELEASE_STORE_FILE=debug.keystore" >> gradle.properties
-          echo "MYAPP_RELEASE_STORE_PASSWORD=android" >> gradle.properties
-          echo "MYAPP_RELEASE_KEY_ALIAS=androiddebugkey" >> gradle.properties
-          echo "MYAPP_RELEASE_KEY_PASSWORD=android" >> gradle.properties
-          
-          # 基本的 Gradle 配置（避免复杂配置导致问题）
-          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError" >> gradle.properties
-          echo "org.gradle.daemon=false" >> gradle.properties
-          echo "org.gradle.parallel=false" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-          echo "android.useAndroidX=true" >> gradle.properties
-          
-          # 创建 Gradle 初始化脚本来处理依赖冲突
-          mkdir -p ~/.gradle/init.d/
-          cat > ~/.gradle/init.d/dependency-resolution.gradle << 'EOF'
-          allprojects {
-              configurations.all {
-                  resolutionStrategy {
-                      // 排除有问题的 BouncyCastle 版本
-                      eachDependency { DependencyResolveDetails details ->
-                          if (details.requested.group == 'org.bouncycastle') {
-                              if (details.requested.name.startsWith('bcprov') || 
-                                  details.requested.name.startsWith('bcpkix') || 
-                                  details.requested.name.startsWith('bcutil')) {
-                                  // 强制使用兼容版本
-                                  details.useVersion '1.77'
-                                  details.because 'Avoid Java 21 bytecode compatibility issues'
-                              }
-                          }
-                      }
-                  }
-              }
-          }
+          # 使用 debug keystore（仅用于测试；生产请替换为正式密钥）
+          cat >> gradle.properties <<EOF
+          MYAPP_RELEASE_STORE_FILE=debug.keystore
+          MYAPP_RELEASE_STORE_PASSWORD=android
+          MYAPP_RELEASE_KEY_ALIAS=androiddebugkey
+          MYAPP_RELEASE_KEY_PASSWORD=android
+          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m
+          org.gradle.daemon=false
+          org.gradle.parallel=true
+          android.useAndroidX=true
+          android.enableJetifier=true
+          # ✅ 抑制 AGP 8.2.1 对 compileSdk=35 的警告
+          android.suppressUnsupportedCompileSdk=35
           EOF
 
-      - name: Verify dependencies and build
+      - name: Build Android Release
         working-directory: android
-        run: |
-          # 检查依赖解析
-          echo "=== 检查 BouncyCastle 依赖版本 ==="
-          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath | grep bouncycastle || echo "未找到 BouncyCastle 依赖"
-          
-          # 清理并构建
-          echo "=== 开始构建 ==="
-          ./gradlew clean --no-daemon --no-parallel --stacktrace
-          ./gradlew assembleRelease --no-daemon --no-parallel --stacktrace --info
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Get version
         id: get_version
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
-            # 手动触发时使用输入的版本
             VERSION="${{ inputs.version }}"
           elif [[ "$GITHUB_REF" == refs/tags/android-v* ]]; then
-            # Tag 触发时从 tag 提取版本
             VERSION="${GITHUB_REF#refs/tags/android-v}"
           else
-            # 从 package.json 读取版本
-            VERSION=$(node -p "require('./package.json').version")
+            # 从 build.gradle 读取 Android 版本作为 fallback
+            VERSION=$(grep 'versionName' android/app/build.gradle | sed 's/.*versionName "\([^"]*\)".*/\1/')
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Build version: $VERSION"
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/release/*.apk NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/*.apk release/NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: android-v${{ steps.get_version.outputs.VERSION }}
-          files: NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
+          files: release/NeuroFlex-v${{ steps.get_version.outputs.VERSION }}.apk
           name: Android v${{ steps.get_version.outputs.VERSION }}
           body: |
             ## NeuroFlex Android v${{ steps.get_version.outputs.VERSION }}
@@ -176,9 +129,7 @@ jobs:
 
       - name: Update app-version.json
         run: |
-          # 获取下载域名，优先使用环境变量，否则使用默认值
           DOWNLOAD_BASE_URL="${{ vars.DOWNLOAD_BASE_URL || 'https://download-neuroflex.061129.xyz' }}"
-          
           mkdir -p public
           cat > public/app-version.json << EOF
           {
