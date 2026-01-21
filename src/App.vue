@@ -1,5 +1,8 @@
 <template>
   <div id="app" class="app-container">
+    <!-- 开屏动画（仅原生环境） -->
+    <AppSplash v-if="showSplash" @complete="onSplashComplete" />
+
     <router-view v-slot="{ Component, route }">
       <transition :name="transitionName" mode="out-in">
         <component :is="Component" :key="getRouteKey(route)" />
@@ -22,17 +25,27 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 import { isPC } from '@/utils/device'
 import { useVersionCheck } from '@/composables/useVersionCheck'
 import UpdateDialog from '@/components/UpdateDialog.vue'
+import AppSplash from '@/components/AppSplash.vue'
 
 const router = useRouter()
 const route = useRoute()
 const transitionName = ref('none')
 
+// 开屏动画状态（所有环境都显示）
+const showSplash = ref(true)
+
 // 版本检测
 const { currentVersion, latestVersion, hasUpdate, updateInfo, checkForUpdates } = useVersionCheck()
 const showUpdateDialog = ref(false)
+
+// 开屏动画完成
+function onSplashComplete() {
+  showSplash.value = false
+}
 
 // 获取路由key，对于/main下的路由使用固定key以避免TabLayout重新渲染
 function getRouteKey(route) {

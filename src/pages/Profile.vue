@@ -131,6 +131,29 @@
           </div>
         </div>
 
+        <!-- 应用下载 -->
+        <div class="download-section">
+          <h3 class="section-title">应用下载</h3>
+          <div class="download-card" @click="goToDownload">
+            <div class="download-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
+            <div class="download-info">
+              <div class="download-title">下载 NeuroFlex APP</div>
+              <div class="download-desc">获得更好的训练体验</div>
+            </div>
+            <div class="download-arrow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
         <!-- 数据操作 -->
         <div class="actions-section">
           <h3 class="section-title">数据管理</h3>
