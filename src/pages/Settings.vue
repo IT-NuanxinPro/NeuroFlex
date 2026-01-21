@@ -116,7 +116,7 @@
         </button>
         
         <div class="about-info">
-          <p><strong>版本:</strong> {{ configStore.appConfig.version }}</p>
+          <p><strong>版本:</strong> {{ currentVersion }}</p>
           <p><strong>应用名称:</strong> NeuroFlex 认知训练系统</p>
           <p><strong>描述:</strong> 专业的认知与大脑训练</p>
         </div>
@@ -295,17 +295,25 @@ function getPermissionName(key) {
 .settings-page {
   min-height: 100vh;
   background: $bg-primary;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-header {
   @include safe-area-padding(top);
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: $spacing-md $spacing-lg;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
   .back-button {
     @include button-reset;
@@ -322,6 +330,7 @@ function getPermissionName(key) {
     font-size: $font-xl;
     font-weight: $font-semibold;
     margin: 0;
+    color: $text-primary;
   }
 
   .header-spacer {
@@ -330,7 +339,10 @@ function getPermissionName(key) {
 }
 
 .page-content {
+  flex: 1;
   padding: $spacing-lg;
+  overflow-y: auto;
+  @include custom-scrollbar;
 }
 
 .settings-section {

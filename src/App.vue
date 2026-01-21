@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Capacitor } from '@capacitor/core'
 import { isPC } from '@/utils/device'
@@ -202,7 +202,9 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
+const reloadTimer = ref(null)
+
+onMounted(async () => {
   // 移除加载屏幕
   const loadingScreen = document.querySelector('.loading-screen')
   if (loadingScreen) {
@@ -211,7 +213,60 @@ onMounted(() => {
       setTimeout(() => loadingScreen.remove(), 300)
     }, 500)
   }
+  
+  // 检测覆盖安装并修复状态
+  if (Capacitor.isNativePlatform()) {
+    const lastVersion = localStorage.getItem('app_last_version')
+    const currentAppVersion = await getCurrentAppVersion()
+    
+    console.log('🔍 版本检测:', { lastVersion, currentAppVersion })
+    
+    if (lastVersion && lastVersion !== currentAppVersion) {
+      console.log('🔄 检测到覆盖安装，执行修复流程')
+      
+      // 清理可能导致问题的状态
+      try {
+        // 清理 Vue Router 相关缓存
+        sessionStorage.clear()
+        
+        // 强制刷新页面状态（延迟执行避免与初始化冲突）
+        reloadTimer.value = setTimeout(() => {
+          console.log('🔄 强制刷新页面状态')
+          window.location.reload()
+        }, 2000)
+        
+      } catch (error) {
+        console.error('修复流程失败:', error)
+      }
+    }
+    
+    // 保存当前版本
+    localStorage.setItem('app_last_version', currentAppVersion)
+  }
 })
+
+onUnmounted(() => {
+  // 清理定时器
+  if (reloadTimer.value) {
+    clearTimeout(reloadTimer.value)
+    reloadTimer.value = null
+  }
+})
+
+// 获取真实的 APP 版本
+async function getCurrentAppVersion() {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { App } = await import('@capacitor/app')
+      const appInfo = await App.getInfo()
+      return appInfo.version
+    } catch (error) {
+      console.error('获取 APP 版本失败:', error)
+      return '1.0.2'
+    }
+  }
+  return '1.1.0'
+}
 </script>
 
 <style lang="scss" scoped>
