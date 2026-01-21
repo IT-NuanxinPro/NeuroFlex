@@ -49,33 +49,48 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Clean Gradle cache
+      - name: Clean Gradle cache and build directories
         run: |
-          rm -rf ~/.gradle/caches/
+          # 完全清理所有可能的缓存和构建目录
+          rm -rf ~/.gradle/
+          rm -rf ~/.android/
           rm -rf android/.gradle/
           rm -rf android/build/
           rm -rf android/app/build/
+          rm -rf android/capacitor-cordova-android-plugins/build/
+          
+          # 清理 Capacitor 缓存
+          rm -rf node_modules/.capacitor/
+          
+          # 确保 Android 目录存在且权限正确
+          chmod +x android/gradlew
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Setup signing
+      - name: Setup signing and Gradle properties
         run: |
+          cd android
+          
           # 使用debug keystore进行签名（生产环境应使用正式keystore）
-          echo "MYAPP_RELEASE_STORE_FILE=debug.keystore" >> android/gradle.properties
-          echo "MYAPP_RELEASE_STORE_PASSWORD=android" >> android/gradle.properties
-          echo "MYAPP_RELEASE_KEY_ALIAS=androiddebugkey" >> android/gradle.properties
-          echo "MYAPP_RELEASE_KEY_PASSWORD=android" >> android/gradle.properties
-          # 添加 Gradle 优化配置
-          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
-          echo "org.gradle.parallel=true" >> android/gradle.properties
-          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "MYAPP_RELEASE_STORE_FILE=debug.keystore" >> gradle.properties
+          echo "MYAPP_RELEASE_STORE_PASSWORD=android" >> gradle.properties
+          echo "MYAPP_RELEASE_KEY_ALIAS=androiddebugkey" >> gradle.properties
+          echo "MYAPP_RELEASE_KEY_PASSWORD=android" >> gradle.properties
+          
+          # 基本的 Gradle 配置（避免复杂配置导致问题）
+          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError" >> gradle.properties
+          echo "org.gradle.daemon=false" >> gradle.properties
+          echo "org.gradle.parallel=false" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
 
       - name: Build Release APK
         working-directory: android
         run: |
-          ./gradlew clean
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          # 使用最简单的构建方式，避免并发和缓存问题
+          ./gradlew clean --no-daemon --no-parallel --stacktrace
+          ./gradlew assembleRelease --no-daemon --no-parallel --stacktrace --info
 
       - name: Get version
         id: get_version
