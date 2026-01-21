@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath 'com.android.tools.build:gradle:8.2.1'
         classpath 'com.google.gms:google-services:4.4.0'
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -21,6 +21,15 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    // 强制使用兼容的 BouncyCastle 版本（避免 Java 21 字节码问题）
+    configurations.all {
+        resolutionStrategy {
+            force 'org.bouncycastle:bcprov-jdk18on:1.77'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.77'
+            force 'org.bouncycastle:bcutil-jdk18on:1.77'
+        }
     }
 }
 
