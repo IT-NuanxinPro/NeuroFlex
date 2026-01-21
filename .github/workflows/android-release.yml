@@ -78,9 +78,12 @@ jobs:
 
       - name: Sync Capacitor (force clean sync)
         run: |
-          # 完全重新同步 Capacitor
-          npx cap clean android
-          npx cap sync android --force
+          # 手动清理 Capacitor 相关文件
+          rm -rf android/capacitor-cordova-android-plugins/
+          rm -rf android/capacitor-android/
+          
+          # 重新同步 Capacitor
+          npx cap sync android
 
       - name: Setup signing and Gradle properties
         run: |
