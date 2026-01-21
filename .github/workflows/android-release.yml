@@ -85,10 +85,15 @@ jobs:
           echo "android.enableJetifier=true" >> gradle.properties
           echo "android.useAndroidX=true" >> gradle.properties
 
-      - name: Build Release APK
+      - name: Verify dependencies and build
         working-directory: android
         run: |
-          # 使用最简单的构建方式，避免并发和缓存问题
+          # 检查依赖解析
+          echo "=== 检查 BouncyCastle 依赖版本 ==="
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath | grep bouncycastle || echo "未找到 BouncyCastle 依赖"
+          
+          # 清理并构建
+          echo "=== 开始构建 ==="
           ./gradlew clean --no-daemon --no-parallel --stacktrace
           ./gradlew assembleRelease --no-daemon --no-parallel --stacktrace --info
 
