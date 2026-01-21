@@ -49,24 +49,38 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Clean Gradle cache and build directories
+      - name: Complete cache cleanup (nuclear option)
         run: |
-          # 完全清理所有可能的缓存和构建目录
-          rm -rf ~/.gradle/
-          rm -rf ~/.android/
+          # 删除所有可能的缓存目录
+          sudo rm -rf ~/.gradle/
+          sudo rm -rf ~/.android/
+          sudo rm -rf ~/.m2/
+          sudo rm -rf /tmp/gradle*
+          sudo rm -rf /home/runner/.gradle/
+          sudo rm -rf /home/runner/.android/
+          
+          # 清理项目中的所有构建产物
           rm -rf android/.gradle/
           rm -rf android/build/
           rm -rf android/app/build/
+          rm -rf android/capacitor-android/build/
           rm -rf android/capacitor-cordova-android-plugins/build/
           
           # 清理 Capacitor 缓存
           rm -rf node_modules/.capacitor/
+          rm -rf .capacitor/
           
-          # 确保 Android 目录存在且权限正确
+          # 清理 npm/pnpm 缓存
+          pnpm store prune
+          
+          # 确保权限正确
           chmod +x android/gradlew
 
-      - name: Sync Capacitor
-        run: npx cap sync android
+      - name: Sync Capacitor (force clean sync)
+        run: |
+          # 完全重新同步 Capacitor
+          npx cap clean android
+          npx cap sync android --force
 
       - name: Setup signing and Gradle properties
         run: |
@@ -84,6 +98,29 @@ jobs:
           echo "org.gradle.parallel=false" >> gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
           echo "android.useAndroidX=true" >> gradle.properties
+          
+          # 创建 Gradle 初始化脚本来处理依赖冲突
+          mkdir -p ~/.gradle/init.d/
+          cat > ~/.gradle/init.d/dependency-resolution.gradle << 'EOF'
+          allprojects {
+              configurations.all {
+                  resolutionStrategy {
+                      // 排除有问题的 BouncyCastle 版本
+                      eachDependency { DependencyResolveDetails details ->
+                          if (details.requested.group == 'org.bouncycastle') {
+                              if (details.requested.name.startsWith('bcprov') || 
+                                  details.requested.name.startsWith('bcpkix') || 
+                                  details.requested.name.startsWith('bcutil')) {
+                                  // 强制使用兼容版本
+                                  details.useVersion '1.77'
+                                  details.because 'Avoid Java 21 bytecode compatibility issues'
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Verify dependencies and build
         working-directory: android
